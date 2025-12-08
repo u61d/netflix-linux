@@ -1,72 +1,114 @@
-name: Feature Request
-description: Suggest a new feature or improvement
-title: "[Feature]: "
-labels: ["enhancement"]
+name: Bug Report
+description: Report a bug or issue
+title: "[Bug]: "
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a feature!
+        Thanks for taking the time to report this bug!
 
   - type: textarea
-    id: problem
+    id: description
     attributes:
-      label: Problem or use case
-      description: What problem does this solve? What are you trying to do?
-      placeholder: I'm frustrated when...
+      label: Describe the bug
+      description: A clear description of what the bug is
+      placeholder: Tell us what you see
     validations:
       required: true
 
   - type: textarea
-    id: solution
+    id: reproduce
     attributes:
-      label: Proposed solution
-      description: How would you like this to work?
-      placeholder: Describe your ideal solution
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Open app
+        2. Click on '...'
+        3. See error
     validations:
       required: true
 
   - type: textarea
-    id: alternatives
+    id: expected
     attributes:
-      label: Alternatives considered
-      description: Any other approaches you've thought about?
-      placeholder: Describe alternatives
+      label: Expected behavior
+      description: What should happen instead?
+      placeholder: Describe what you expected
+    validations:
+      required: true
 
   - type: textarea
-    id: examples
+    id: screenshots
     attributes:
-      label: Examples
-      description: Screenshots, mockups, or examples from other apps
-      placeholder: Add visual examples if relevant
+      label: Screenshots
+      description: If applicable, add screenshots
+      placeholder: Drag and drop images here
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Check in Help → About
+      placeholder: "2.0.0"
+    validations:
+      required: true
 
   - type: dropdown
-    id: priority
+    id: display-server
     attributes:
-      label: How important is this to you?
+      label: Display server
+      description: Which display server are you using?
       options:
-        - Nice to have
-        - Would be useful
-        - Really want this
-        - Blocking my usage
+        - Wayland
+        - X11
+        - Not sure
     validations:
       required: true
+
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop environment / Window manager
+      description: Examples - GNOME, KDE, Hyprland, i3, etc.
+      placeholder: "Hyprland"
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Linux distribution
+      description: Which distro and version?
+      placeholder: "Arch Linux"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Run the app from terminal and paste any error messages
+        Location: ~/.config/netflix-linux/logs/
+      placeholder: Paste logs here
+      render: shell
 
   - type: textarea
     id: additional
     attributes:
       label: Additional context
-      description: Anything else we should know?
-      placeholder: Add any other context
+      description: Any other info that might help
+      placeholder: Add any other context about the problem
 
   - type: checkboxes
     id: checklist
     attributes:
       label: Checklist
       options:
-        - label: I've searched for similar feature requests
+        - label: I've searched for similar issues
           required: true
-        - label: This feature aligns with the project's goals
+        - label: I've tested with the latest version
           required: true
-        - label: I'm willing to help implement this if needed
-          required: false
+        - label: This is not a Netflix service issue
+          required: true
