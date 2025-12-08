@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>Watch History</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        --bg-primary: #0b0b0d;
+        --bg-secondary: #141418;
+        --border: #222;
+        --text-primary: #f5f5f5;
+        --text-secondary: #aaa;
+        --text-tertiary: #888;
+        --accent: #e50914;
+        --accent-hover: #f40612;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        padding: 16px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        overflow-y: auto;
+      }
+
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .title-icon {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        margin-right: 8px;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .title-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      button {
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: none;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
+      button.secondary {
+        background: #333;
+      }
+
+      button.secondary:hover {
+        background: #444;
+      }
+
+      .stats-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: var(--bg-secondary);
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+      }
+
+      .stat-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+      }
+
+      .stat-card .label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+      }
+
+      .stat-card .value {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+      }
+
+      .stat-card .unit {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-left: 2px;
+        font-weight: 500;
+      }
+
+      .stat-card .subtitle {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        margin-top: 4px;
+      }
+
+      .history-list {
+        margin-top: 16px;
+      }
+
+      .history-item {
+        background: var(--bg-secondary);
+        padding: 14px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+      }
+
+      .history-item:hover {
+        border-color: var(--accent);
+        transform: translateX(4px);
+      }
+
+      .history-item .title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+      }
+
+      .history-item .episode-info {
+        font-size: 13px;
+        color: #ddd;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .history-item .metadata {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-tertiary);
+        flex-wrap: wrap;
+      }
+
+      .history-item .metadata span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .no-history {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-tertiary);
+      }
+
+      .no-history svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+      }
+
+      .no-history p {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .no-history .hint {
+        font-size: 13px;
+        color: var(--text-tertiary);
+      }
+
+      .icon {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+      }
+
+      .search-box {
+        margin-bottom: 16px;
+        position: relative;
+      }
+
+      .search-box input {
+        width: 100%;
+        padding: 10px 40px 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 14px;
+      }
+
+      .search-box input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .search-box .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      <div class="title-label">
+        <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <rect x="2" y="5" width="20" height="14" rx="2" ry="2" />
+          <rect x="4" y="7" width="6" height="6" />
+          <line x1="12" y1="15" x2="20" y2="15" />
+        </svg>
+        <span>Watch History</span>
+      </div>
+      <div class="header-actions">
+        <button class="secondary" onclick="exportHistory()">Export</button>
+        <button class="secondary" onclick="clearHistory()">Clear All</button>
+      </div>
+    </h1>
+
+    <div class="stats-summary">
+      <div class="stat-card">
+        <div class="label">Total Time</div>
+        <div class="value">
+          <span id="totalHours">0</span><span class="unit">h</span> <span id="totalMinutes">0</span
+          ><span class="unit">m</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="label">Sessions</div>
+        <div class="value">
+          <span id="totalSessions">0</span>
+        </div>
+        <div class="subtitle">viewing sessions</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="label">Average</div>
+        <div class="value"><span id="avgSession">0</span><span class="unit">min</span></div>
+        <div class="subtitle">per session</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="label">Most Watched</div>
+        <div
+          class="value"
+          style="font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
+          title=""
+        >
+          <span id="mostWatched">-</span>
+        </div>
+        <div class="subtitle" id="mostWatchedTime"></div>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search history..." />
+      <svg class="icon search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+    </div>
+
+    <div id="historyContainer" class="history-list">
+      <div class="no-history">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p>No watch history yet</p>
+        <div class="hint">Start watching and your history will appear here</div>
+      </div>
+    </div>
+
+    <script>
+      if (!window.historyAPI) {
+        console.error('historyAPI not available!');
+        document.body.innerHTML = `
+        <div style="padding: 20px; color: #f44336; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <h2 style="margin: 0;">Error Loading History</h2>
+          </div>
+          <p>The history API could not be loaded. Please restart the application.</p>
+        </div>
+      `;
+        throw new Error('historyAPI not available');
+      }
+      const { historyAPI } = window;
+
+      let allHistory = [];
+
+      function formatDate(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+        });
+      }
+
+      function formatDuration(minutes) {
+        if (!minutes || minutes < 1) return '< 1m';
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+      }
+
+      function renderHistory(history) {
+        const container = document.getElementById('historyContainer');
+
+        if (!history || history.length === 0) {
+          container.innerHTML = `
+          <div class="no-history">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p>No watch history yet</p>
+            <div class="hint">Start watching and your history will appear here</div>
+          </div>
+        `;
+          return;
+        }
+
+        container.innerHTML = history
+          .map((item) => {
+            let episodeInfo = '';
+            if (Number.isInteger(item.season) && Number.isInteger(item.episode)) {
+              episodeInfo = `<div class="episode-info">S${item.season} E${item.episode}`;
+              if (item.episodeTitle) {
+                episodeInfo += ` · ${item.episodeTitle}`;
+              }
+              episodeInfo += `</div>`;
+            } else if (item.episodeTitle) {
+              episodeInfo = `<div class="episode-info">${item.episodeTitle}</div>`;
+            }
+
+            return `
+          <div class="history-item">
+            <div class="title">${item.title || 'Unknown Title'}</div>
+            ${episodeInfo}
+            <div class="metadata">
+              <span title="Duration">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                ${formatDuration(item.duration)}
+              </span>
+              <span title="When watched">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                ${formatDate(item.endTime || item.startTime)}
+              </span>
+            </div>
+          </div>
+        `;
+          })
+          .join('');
+      }
+
+      function calculateStats(history) {
+        if (!history || history.length === 0) {
+          return {
+            totalMinutes: 0,
+            totalSessions: 0,
+            avgSession: 0,
+            mostWatched: { title: '-', minutes: 0 },
+          };
+        }
+
+        const totalMinutes = history.reduce((sum, item) => sum + (item.duration || 0), 0);
+        const totalSessions = history.length;
+        const avgSession = Math.round(totalMinutes / totalSessions);
+
+        const showTimes = {};
+        history.forEach((item) => {
+          const show = item.title || 'Unknown';
+          showTimes[show] = (showTimes[show] || 0) + (item.duration || 0);
+        });
+
+        const mostWatchedEntry = Object.entries(showTimes).sort((a, b) => b[1] - a[1])[0];
+
+        const mostWatched = mostWatchedEntry
+          ? {
+              title: mostWatchedEntry[0],
+              minutes: mostWatchedEntry[1],
+            }
+          : { title: '-', minutes: 0 };
+
+        return { totalMinutes, totalSessions, avgSession, mostWatched };
+      }
+
+      function updateStats(stats) {
+        const hours = Math.floor(stats.totalMinutes / 60);
+        const minutes = stats.totalMinutes % 60;
+
+        document.getElementById('totalHours').textContent = hours;
+        document.getElementById('totalMinutes').textContent = minutes;
+        document.getElementById('totalSessions').textContent = stats.totalSessions;
+        document.getElementById('avgSession').textContent = stats.avgSession;
+
+        const mostWatchedEl = document.getElementById('mostWatched');
+        const mostWatchedTimeEl = document.getElementById('mostWatchedTime');
+        mostWatchedEl.textContent = stats.mostWatched.title;
+        mostWatchedEl.parentElement.title = stats.mostWatched.title;
+
+        if (stats.mostWatched.minutes > 0) {
+          mostWatchedTimeEl.textContent = formatDuration(stats.mostWatched.minutes);
+        } else {
+          mostWatchedTimeEl.textContent = '';
+        }
+      }
+
+      async function loadHistory() {
+        try {
+          const history = await historyAPI.getHistory();
+          allHistory = history || [];
+          const stats = calculateStats(allHistory);
+
+          updateStats(stats);
+          renderHistory(allHistory);
+        } catch (e) {
+          console.error('Load history error:', e);
+          document.getElementById('historyContainer').innerHTML = `
+          <div class="no-history">
+            <p style="color: #f44336;">Failed to load history</p>
+            <div class="hint">${e.message}</div>
+          </div>
+        `;
+        }
+      }
+
+      async function clearHistory() {
+        if (
+          !confirm('Are you sure you want to clear all watch history?\n\nThis cannot be undone.')
+        ) {
+          return;
+        }
+
+        try {
+          await historyAPI.clearHistory();
+          await loadHistory();
+        } catch (e) {
+          alert('Failed to clear history: ' + e.message);
+        }
+      }
+
+      async function exportHistory() {
+        try {
+          await historyAPI.exportHistory();
+        } catch (e) {
+          alert('Failed to export history: ' + e.message);
+        }
+      }
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+
+        if (!query) {
+          renderHistory(allHistory);
+          return;
+        }
+
+        const filtered = allHistory.filter((item) => {
+          const title = (item.title || '').toLowerCase();
+          const episodeTitle = (item.episodeTitle || '').toLowerCase();
+          return title.includes(query) || episodeTitle.includes(query);
+        });
+
+        renderHistory(filtered);
+      });
+
+      window.addEventListener('DOMContentLoaded', loadHistory);
+    </script>
+  </body>
+</html>

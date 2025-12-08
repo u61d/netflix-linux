@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>Settings</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/variables.css" />
+    <style>
+      body {
+        padding: 20px;
+        overflow-y: auto;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .title-icon {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+      }
+      .section {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .section:last-of-type {
+        border-bottom: none;
+      }
+      .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section-title .icon {
+        width: 16px;
+        height: 16px;
+      }
+      .setting {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        gap: 10px;
+      }
+      .setting label {
+        flex: 1;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 6px;
+      }
+      .row input[type='text'] {
+        flex: 1;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 6px;
+        padding-left: 2px;
+      }
+      .footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+      .error {
+        color: #f44336;
+        font-size: 12px;
+        margin-top: 4px;
+        padding: 8px;
+        background: rgba(244, 67, 54, 0.1);
+        border-radius: 4px;
+      }
+      .success {
+        color: #4caf50;
+        font-size: 12px;
+        margin-top: 4px;
+        padding: 8px;
+        background: rgba(76, 175, 80, 0.1);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" />
+        <path
+          d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1.82-.33l-.06-.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 10.6 15a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 15 10.6"
+        />
+      </svg>
+      Settings
+    </h1>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+          />
+        </svg>
+        Discord
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="discordEnabled" />
+        <label for="discordEnabled">Enable Discord Rich Presence</label>
+      </div>
+      <div class="hint">shows what you're watching. needs Discord desktop client</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        Notifications
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="notificationsEnabled" />
+        <label for="notificationsEnabled">Enable notifications</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="quietMode" />
+        <label for="quietMode">Quiet mode</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+        Auto-Skip
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="autoSkipIntro" />
+        <label for="autoSkipIntro">Auto-skip intros</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="autoSkipCredits" />
+        <label for="autoSkipCredits">Auto-skip credits</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="autoNextEpisode" />
+        <label for="autoNextEpisode">Auto-play next episode</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="10 8 16 12 10 16 10 8" />
+        </svg>
+        Playback
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="autoPauseOnBlur" />
+        <label for="autoPauseOnBlur">Pause when window loses focus</label>
+      </div>
+      <div class="setting">
+        <label for="playbackSpeed">Default speed</label>
+      </div>
+      <select id="playbackSpeed">
+        <option value="0.25">0.25x</option>
+        <option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option>
+        <option value="1">1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2.0x</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <line x1="9" y1="3" x2="9" y2="21" />
+        </svg>
+        Window
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="alwaysOnTop" />
+        <label for="alwaysOnTop">Always on top</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="startMinimized" />
+        <label for="startMinimized">Start minimized</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="borderless" />
+        <label for="borderless">Borderless window</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+          />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        Screenshots
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="screenshotSound" />
+        <label for="screenshotSound">Play sound</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="screenshotNotification" />
+        <label for="screenshotNotification">Show notification</label>
+      </div>
+      <div class="setting">
+        <label for="screenshotsDir">Save location</label>
+      </div>
+      <div class="row">
+        <input type="text" id="screenshotsDir" readonly />
+        <button id="chooseDir" class="secondary" type="button">Browse</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+        Health
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="healthReminder" />
+        <label for="healthReminder">Enable reminders</label>
+      </div>
+      <div class="setting">
+        <label for="reminderInterval">Interval (minutes)</label>
+      </div>
+      <input type="number" id="reminderInterval" min="5" max="240" step="5" />
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <line x1="4" y1="21" x2="4" y2="14" />
+          <line x1="4" y1="10" x2="4" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12" y2="3" />
+          <line x1="20" y1="21" x2="20" y2="16" />
+          <line x1="20" y1="12" x2="20" y2="3" />
+        </svg>
+        Advanced
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="showDetailedStats" />
+        <label for="showDetailedStats">Show stats overlay</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="debugMode" />
+        <label for="debugMode">Debug mode</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <svg
+          class="icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+        Privacy & Diagnostics
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="sentryEnabled" />
+        <label for="sentryEnabled">Allow crash reports (anonymous)</label>
+      </div>
+      <div class="hint">
+        opt-in for sending sanitized error data. needs SENTRY_DSN env var
+      </div>
+    </div>
+
+    <div id="statusMessage"></div>
+
+    <div class="footer">
+      <button id="exportBtn" class="secondary" type="button">Export</button>
+      <button id="importBtn" class="secondary" type="button">Import</button>
+      <button id="cancelBtn" class="secondary" type="button">Cancel</button>
+      <button id="saveBtn" type="button">Save (restart needed)</button>
+    </div>
+
+    <script>
+      console.log('[Settings] starting');
+
+      let isInitialized = false;
+      let initAttempts = 0;
+      const MAX_INIT_ATTEMPTS = 20;
+
+      function init() {
+        if (isInitialized) return;
+
+        initAttempts++;
+        console.log(`[Settings] checking API (attempt ${initAttempts}/${MAX_INIT_ATTEMPTS})`);
+
+        if (!window.settingsAPI) {
+          if (initAttempts >= MAX_INIT_ATTEMPTS) {
+            console.error('[Settings] API failed to load');
+            document.body.innerHTML = `
+            <div style="padding: 20px; color: #f44336; text-align: center;">
+              <h2>lmao</h2>
+              <p>settings won't load. try restarting the app</p>
+              <p style="font-size: 12px; color: #aaa; margin-top: 16px;">
+                if this keeps happening check logs in ~/.config/netflix-linux/logs/
+              </p>
+              <button onclick="window.close()" style="margin-top: 16px;">close</button>
+            </div>
+          `;
+            return;
+          }
+
+          setTimeout(init, 100);
+          return;
+        }
+
+        isInitialized = true;
+        console.log('[Settings] API found');
+
+        const { settingsAPI } = window;
+
+        async function loadSettings() {
+          console.log('[Settings] loading');
+          try {
+            const s = await settingsAPI.getSettings();
+            console.log('[Settings] got:', s);
+
+            document.getElementById('discordEnabled').checked = s.discordEnabled;
+            document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
+            document.getElementById('quietMode').checked = s.quietMode;
+            document.getElementById('autoSkipIntro').checked = s.autoSkipIntro;
+            document.getElementById('autoSkipCredits').checked = s.autoSkipCredits;
+            document.getElementById('autoNextEpisode').checked = s.autoNextEpisode;
+            document.getElementById('autoPauseOnBlur').checked = s.autoPauseOnBlur;
+            document.getElementById('alwaysOnTop').checked = s.alwaysOnTop;
+            document.getElementById('startMinimized').checked = s.startMinimized;
+            document.getElementById('borderless').checked = s.borderless;
+            document.getElementById('playbackSpeed').value = s.playbackSpeed;
+            document.getElementById('screenshotSound').checked = s.screenshotSound;
+            document.getElementById('screenshotNotification').checked = s.screenshotNotification;
+            document.getElementById('screenshotsDir').value = s.screenshotsDir;
+            document.getElementById('healthReminder').checked = s.healthReminder;
+            document.getElementById('reminderInterval').value = s.reminderInterval;
+            document.getElementById('showDetailedStats').checked = s.showDetailedStats;
+            document.getElementById('debugMode').checked = s.debugMode;
+            document.getElementById('sentryEnabled').checked = s.sentryEnabled;
+
+            console.log('[Settings] UI ready');
+          } catch (e) {
+            console.error('[Settings] error:', e);
+            showMessage('failed: ' + e.message, 'error');
+          }
+        }
+
+        async function saveSettings() {
+          console.log('[Settings] saving');
+          const btn = document.getElementById('saveBtn');
+          btn.disabled = true;
+          btn.textContent = 'saving';
+
+          try {
+            const updates = {
+              discordEnabled: document.getElementById('discordEnabled').checked,
+              notificationsEnabled: document.getElementById('notificationsEnabled').checked,
+              quietMode: document.getElementById('quietMode').checked,
+              autoSkipIntro: document.getElementById('autoSkipIntro').checked,
+              autoSkipCredits: document.getElementById('autoSkipCredits').checked,
+              autoNextEpisode: document.getElementById('autoNextEpisode').checked,
+              autoPauseOnBlur: document.getElementById('autoPauseOnBlur').checked,
+              alwaysOnTop: document.getElementById('alwaysOnTop').checked,
+              startMinimized: document.getElementById('startMinimized').checked,
+              borderless: document.getElementById('borderless').checked,
+              playbackSpeed: parseFloat(document.getElementById('playbackSpeed').value),
+              screenshotSound: document.getElementById('screenshotSound').checked,
+              screenshotNotification: document.getElementById('screenshotNotification').checked,
+              screenshotsDir: document.getElementById('screenshotsDir').value,
+              healthReminder: document.getElementById('healthReminder').checked,
+              reminderInterval: parseInt(document.getElementById('reminderInterval').value),
+              showDetailedStats: document.getElementById('showDetailedStats').checked,
+              debugMode: document.getElementById('debugMode').checked,
+              sentryEnabled: document.getElementById('sentryEnabled').checked,
+            };
+
+            console.log('[Settings] saving:', updates);
+            await settingsAPI.updateSettings(updates);
+            console.log('[Settings] saved');
+            showMessage('saved! restart to apply', 'success');
+            setTimeout(() => window.close(), 800);
+          } catch (e) {
+            console.error('[Settings] save error:', e);
+            showMessage('failed: ' + e.message, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Save (restart needed)';
+          }
+        }
+
+        async function exportSettings() {
+          try {
+            const path = await settingsAPI.exportSettings();
+            if (path) {
+              showMessage(`exported to ${path}`, 'success');
+            }
+          } catch (e) {
+            showMessage('export failed: ' + e.message, 'error');
+          }
+        }
+
+        async function importSettings() {
+          if (!confirm('this will overwrite current settings. continue?')) return;
+
+          try {
+            const success = await settingsAPI.importSettings();
+            if (success) {
+              showMessage('imported! restart to apply', 'success');
+              setTimeout(() => loadSettings(), 1000);
+            }
+          } catch (e) {
+            showMessage('import failed: ' + e.message, 'error');
+          }
+        }
+
+        async function chooseDir() {
+          console.log('[Settings] choosing dir');
+          try {
+            const dir = await settingsAPI.chooseScreenshotDir();
+            if (dir) document.getElementById('screenshotsDir').value = dir;
+          } catch (e) {
+            showMessage('failed: ' + e.message, 'error');
+          }
+        }
+
+        function showMessage(text, type) {
+          const el = document.getElementById('statusMessage');
+          el.textContent = text;
+          el.className = type;
+          setTimeout(() => {
+            if (el.textContent === text) el.textContent = '';
+          }, 3000);
+        }
+
+        console.log('[Settings] attaching listeners');
+        document.getElementById('chooseDir').onclick = chooseDir;
+        document.getElementById('saveBtn').onclick = saveSettings;
+        document.getElementById('cancelBtn').onclick = () => window.close();
+        document.getElementById('exportBtn').onclick = exportSettings;
+        document.getElementById('importBtn').onclick = importSettings;
+        console.log('[Settings] listeners attached');
+
+        loadSettings();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    </script>
+  </body>
+</html>

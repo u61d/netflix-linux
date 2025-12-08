@@ -1,0 +1,42 @@
+{
+  "appId": "com.netflix.linux",
+  "productName": "Netflix",
+  "electronDownload": {
+    "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
+  },
+  "linux": {
+    "target": ["pacman", "AppImage", "deb"],
+    "category": "Video;AudioVideo;Player",
+    "icon": "assets/icons/icon.svg",
+    "maintainer": "u61d",
+    "executableArgs": ["--no-sandbox", "--disable-gpu-sandbox"],
+
+    "desktop": {
+      "entry": {
+        "Name": "Netflix",
+        "Comment": "Watch Netflix on Linux",
+        "Keywords": "netflix;streaming;video"
+      }
+    }
+  },
+  "pacman": {
+    "depends": ["gtk3", "nss", "alsa-lib"]
+  },
+  "deb": {
+    "depends": ["libgtk-3-0", "libnss3", "libasound2"]
+  },
+  "files": [
+    "src/**/*",
+    "assets/**/*",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "extraResources": [
+    {
+      "from": "assets/",
+      "to": "assets/",
+      "filter": ["**/*"]
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>Watch Queue</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/variables.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        --bg-primary: #0b0b0d;
+        --bg-secondary: #141418;
+        --border: #222;
+        --text-primary: #f5f5f5;
+        --text-secondary: #aaa;
+        --text-tertiary: #888;
+        --accent: #e50914;
+        --accent-hover: #f40612;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        padding: 16px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        overflow-y: auto;
+      }
+
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .title-icon {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        margin-right: 8px;
+      }
+
+      .title-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      button {
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: none;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
+      button.secondary {
+        background: #333;
+      }
+
+      button.secondary:hover {
+        background: #444;
+      }
+
+      .queue-list {
+        margin-top: 16px;
+      }
+
+      .queue-item {
+        background: var(--bg-secondary);
+        padding: 14px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .queue-item:hover {
+        border-color: var(--accent);
+        transform: translateX(4px);
+      }
+
+      .queue-item-info {
+        flex: 1;
+      }
+
+      .queue-item .title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+      }
+
+      .queue-item .metadata {
+        font-size: 12px;
+        color: var(--text-tertiary);
+      }
+
+      .no-queue {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-tertiary);
+      }
+
+      .no-queue svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+      }
+
+      .no-queue p {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .no-queue .hint {
+        font-size: 13px;
+        color: var(--text-tertiary);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      <div class="title-label">
+        <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+        <span>Watch Queue</span>
+      </div>
+    </h1>
+
+    <div id="queueContainer" class="queue-list">
+      <div class="no-queue">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+        <p>Queue is empty</p>
+        <div class="hint">Your watch queue will appear here</div>
+      </div>
+    </div>
+
+    <script>
+      const { queueAPI } = window;
+
+      function formatDate(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+
+      function renderQueue(queue) {
+        const container = document.getElementById('queueContainer');
+
+        if (!queue || queue.length === 0) {
+          container.innerHTML = `
+          <div class="no-queue">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            <p>Queue is empty</p>
+            <div class="hint">Your watch queue will appear here</div>
+          </div>
+        `;
+          return;
+        }
+
+        container.innerHTML = queue
+          .map(
+            (item, index) => `
+        <div class="queue-item">
+          <div class="queue-item-info">
+            <div class="title">${item.title || 'Unknown Title'}</div>
+            <div class="metadata">Added ${formatDate(item.addedAt)}</div>
+          </div>
+          <button class="secondary" onclick="removeItem(${index})">Remove</button>
+        </div>
+      `
+          )
+          .join('');
+      }
+
+      async function loadQueue() {
+        try {
+          const queue = await queueAPI.getQueue();
+          renderQueue(queue || []);
+        } catch (e) {
+          console.error('Load queue error:', e);
+          document.getElementById('queueContainer').innerHTML = `
+          <div class="no-queue">
+            <p style="color: #f44336;">Failed to load queue</p>
+            <div class="hint">${e.message}</div>
+          </div>
+        `;
+        }
+      }
+
+      async function removeItem(index) {
+        try {
+          await queueAPI.removeFromQueue(index);
+          await loadQueue();
+        } catch (e) {
+          alert('Failed to remove item: ' + e.message);
+        }
+      }
+
+      window.removeItem = removeItem;
+      window.addEventListener('DOMContentLoaded', loadQueue);
+    </script>
+  </body>
+</html>
