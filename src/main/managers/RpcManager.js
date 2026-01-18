@@ -9,6 +9,83 @@ class RpcManager {
     this.retryTimeout = null;
     this.updateRateLimit = null;
     this.reconnectAttempts = 0;
+
+    // detect linux distro once on init
+    this.distroInfo = this.detectDistro();
+  }
+
+  detectDistro() {
+    try {
+      const fs = require('fs');
+
+      // check for specific distro files first
+      const distroFiles = [
+        { file: '/etc/arch-release', name: 'Arch Linux', key: 'arch' },
+        { file: '/etc/manjaro-release', name: 'Manjaro', key: 'manjaro' },
+        { file: '/etc/fedora-release', name: 'Fedora', key: 'fedora' },
+        { file: '/etc/gentoo-release', name: 'Gentoo', key: 'gentoo' },
+        { file: '/etc/debian_version', name: 'Debian', key: 'debian' },
+      ];
+
+      for (const { file, name, key } of distroFiles) {
+        if (fs.existsSync(file)) {
+          return { name, key };
+        }
+      }
+
+      // try reading /etc/os-release
+      if (fs.existsSync('/etc/os-release')) {
+        const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+        const idMatch = osRelease.match(/^ID="?([^"\n]+)"?/m);
+        const nameMatch = osRelease.match(/^NAME="?([^"\n]+)"?/m);
+        const prettyMatch = osRelease.match(/^PRETTY_NAME="?([^"\n]+)"?/m);
+
+        if (idMatch) {
+          const id = idMatch[1].toLowerCase();
+          const distroMap = {
+            arch: { name: 'Arch Linux', key: 'arch' },
+            manjaro: { name: 'Manjaro', key: 'manjaro' },
+            ubuntu: { name: 'Ubuntu', key: 'ubuntu' },
+            debian: { name: 'Debian', key: 'debian' },
+            fedora: { name: 'Fedora', key: 'fedora' },
+            opensuse: { name: 'openSUSE', key: 'opensuse' },
+            gentoo: { name: 'Gentoo', key: 'gentoo' },
+            mint: { name: 'Linux Mint', key: 'mint' },
+            pop: { name: 'Pop!_OS', key: 'popos' },
+            endeavouros: { name: 'EndeavourOS', key: 'endeavouros' },
+            nixos: { name: 'NixOS', key: 'nixos' },
+          };
+
+          if (distroMap[id]) {
+            return distroMap[id];
+          }
+        }
+
+        const displayName = prettyMatch?.[1] || nameMatch?.[1] || 'Linux';
+        return { name: displayName, key: 'linux' };
+      }
+
+      // fallback to lsb_release
+      if (fs.existsSync('/etc/lsb-release')) {
+        const lsbRelease = fs.readFileSync('/etc/lsb-release', 'utf8');
+        const idMatch = lsbRelease.match(/DISTRIB_ID="?([^"\n]+)"?/);
+        const descMatch = lsbRelease.match(/DISTRIB_DESCRIPTION="?([^"\n]+)"?/);
+
+        if (idMatch) {
+          const id = idMatch[1].toLowerCase();
+          if (id === 'ubuntu') return { name: 'Ubuntu', key: 'ubuntu' };
+          if (id === 'linuxmint') return { name: 'Linux Mint', key: 'mint' };
+        }
+
+        if (descMatch) {
+          return { name: descMatch[1], key: 'linux' };
+        }
+      }
+    } catch (error) {
+      this.ctx.logger.debug('Could not detect distro:', error.message);
+    }
+
+    return { name: 'Linux', key: 'linux' };
   }
 
   get clientId() {
@@ -112,9 +189,11 @@ class RpcManager {
     this.client.user
       .setActivity({
         details: 'Browsing Netflix',
-        state: 'Idle',
+        state: `on ${this.distroInfo.name}`,
         largeImageKey: 'netflix',
         largeImageText: 'Netflix for Linux',
+        smallImageKey: this.distroInfo.key,
+        smallImageText: this.distroInfo.name,
         instance: false,
       })
       .catch(() => {});
@@ -127,13 +206,14 @@ class RpcManager {
     let details = player.title || 'Netflix';
     let state;
 
+    // build the episode info string
     if (Number.isInteger(player.season) && Number.isInteger(player.episode)) {
       const epTitle = player.episodeTitle ? ` - ${player.episodeTitle}` : '';
       state = `S${player.season}·E${player.episode}${epTitle}`;
     } else if (player.episodeTitle) {
       state = player.episodeTitle;
     } else {
-      state = isPlaying ? 'Watching' : 'Paused';
+      state = `on ${this.distroInfo.name}`;
     }
 
     const activity = {
@@ -141,9 +221,12 @@ class RpcManager {
       state,
       largeImageKey: 'netflix',
       largeImageText: 'Netflix for Linux',
+      smallImageKey: this.distroInfo.key,
+      smallImageText: this.distroInfo.name,
       instance: false,
     };
 
+    // add timestamp if playing
     if (isPlaying && player.duration > 0 && Number.isFinite(player.position)) {
       const start = Math.round(Date.now() - player.position * 1000);
       activity.timestamps = { start };

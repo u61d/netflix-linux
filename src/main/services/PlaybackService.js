@@ -8,6 +8,7 @@ class PlaybackService {
     this.notifier = new NotificationService(ctx);
     this.speedNotificationTimer = null;
     this.lastSpeedNotification = null;
+    this.autoPaused = false;
   }
 
   async setSpeed(speed) {
@@ -216,6 +217,63 @@ class PlaybackService {
       return result;
     } catch (error) {
       this.ctx.logger.error('Play/pause error:', error);
+      return null;
+    }
+  }
+
+  async pauseIfPlaying(reason = 'auto') {
+    const win = this.ctx.getMainWindow();
+    if (!win) return null;
+
+    const script = `
+      (function() {
+        const video = document.querySelector('video');
+        if (!video) return { status: 'no-video' };
+        if (video.paused || video.ended) return { status: 'already-paused' };
+        video.pause();
+        return { status: 'paused' };
+      })();
+    `;
+
+    try {
+      const result = await win.webContents.executeJavaScript(script, true);
+      if (result?.status === 'paused') {
+        this.autoPaused = true;
+        this.ctx.logger.debug(`Auto-paused playback (${reason})`);
+      }
+      return result;
+    } catch (error) {
+      this.ctx.logger.error('pauseIfPlaying error:', error);
+      return null;
+    }
+  }
+
+  async resumeIfAutoPaused(reason = 'auto') {
+    if (!this.autoPaused) return null;
+
+    const win = this.ctx.getMainWindow();
+    if (!win) return null;
+
+    const script = `
+      (function() {
+        const video = document.querySelector('video');
+        if (!video) return { status: 'no-video' };
+        if (video.ended) return { status: 'ended' };
+        if (!video.paused) return { status: 'already-playing' };
+        video.play();
+        return { status: 'playing' };
+      })();
+    `;
+
+    try {
+      const result = await win.webContents.executeJavaScript(script, true);
+      if (result?.status === 'playing' || result?.status === 'already-playing') {
+        this.autoPaused = false;
+        this.ctx.logger.debug(`Auto-resumed playback (${reason})`);
+      }
+      return result;
+    } catch (error) {
+      this.ctx.logger.error('resumeIfAutoPaused error:', error);
       return null;
     }
   }

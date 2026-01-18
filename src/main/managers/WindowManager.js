@@ -7,6 +7,12 @@ class WindowManager {
     this.ctx = ctx;
     this.windows = new Map();
     this.windowStates = new Map();
+    this.hyprlandPoller = null;
+    this.hyprlandState = {
+      lastVisible: true,
+      windowPid: null,
+      hyprctlAvailable: true,
+    };
   }
 
   createMainWindow() {
@@ -80,6 +86,28 @@ class WindowManager {
     win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       logger.error('Main window failed to load', { errorCode, errorDescription, validatedURL });
     });
+
+    const maybeAutoPause = (reason) => {
+      if (!store.get('autoPauseOnBlur', false)) return;
+      const playbackService = this.ctx.getService('playback');
+      if (!playbackService) return;
+      playbackService.pauseIfPlaying(reason);
+    };
+
+    const maybeAutoResume = (reason) => {
+      if (!store.get('autoPauseOnBlur', false)) return;
+      const playbackService = this.ctx.getService('playback');
+      if (!playbackService) return;
+      playbackService.resumeIfAutoPaused(reason);
+    };
+
+    win.on('blur', () => maybeAutoPause('blur'));
+    win.on('focus', () => maybeAutoResume('focus'));
+    win.on('hide', () => maybeAutoPause('hide'));
+    win.on('minimize', () => maybeAutoPause('minimize'));
+    win.on('restore', () => maybeAutoResume('restore'));
+    win.on('show', () => maybeAutoResume('show'));
+    this.setupHyprlandAutoPause(win, maybeAutoPause);
 
     this.windows.set('main', win);
     return win;
@@ -281,6 +309,91 @@ class WindowManager {
       }
     });
     this.windows.clear();
+  }
+
+  setupHyprlandAutoPause(win, maybeAutoPause) {
+    const EnvironmentDetector = require('../utils/environment');
+    const env = new EnvironmentDetector();
+    if (!env.isHyprland()) return;
+
+    const { execFile } = require('child_process');
+
+    const queryHyprctl = (args) =>
+      new Promise((resolve) => {
+        execFile('hyprctl', args, { timeout: 400 }, (error, stdout) => {
+          if (error) {
+            if (error.code === 'ENOENT') {
+              this.hyprlandState.hyprctlAvailable = false;
+            }
+            return resolve(null);
+          }
+          try {
+            resolve(JSON.parse(stdout));
+          } catch {
+            resolve(null);
+          }
+        });
+      });
+
+    const updatePid = () => {
+      if (win.isDestroyed()) return;
+      try {
+        const pid = win.webContents.getOSProcessId();
+        if (pid) this.hyprlandState.windowPid = pid;
+      } catch {
+        // ignore
+      }
+    };
+
+    updatePid();
+    win.webContents.on('did-finish-load', updatePid);
+
+    if (this.hyprlandPoller) return;
+
+    const poll = async () => {
+      if (win.isDestroyed()) return;
+      if (!this.ctx.store.get('autoPauseOnBlur', false)) return;
+      if (!this.hyprlandState.hyprctlAvailable) return;
+
+      const windowPid = this.hyprlandState.windowPid;
+      if (!windowPid) {
+        updatePid();
+        return;
+      }
+
+      const [activeWorkspace, clients] = await Promise.all([
+        queryHyprctl(['activeworkspace', '-j']),
+        queryHyprctl(['clients', '-j']),
+      ]);
+
+      if (!activeWorkspace || !Array.isArray(clients)) return;
+
+      const client = clients.find((entry) => entry.pid === windowPid);
+      if (!client) return;
+
+      const activeId = activeWorkspace.id ?? activeWorkspace.ID ?? activeWorkspace.workspace?.id;
+      const clientWsId = client.workspace?.id ?? client.workspace?.ID;
+      if (activeId == null || clientWsId == null) return;
+
+      const isVisible = activeId === clientWsId;
+      const wasVisible = this.hyprlandState.lastVisible;
+      this.hyprlandState.lastVisible = isVisible;
+
+      if (wasVisible && !isVisible) {
+        maybeAutoPause('workspace-switch');
+      }
+
+      if (!wasVisible && isVisible) {
+        const playbackService = this.ctx.getService('playback');
+        playbackService?.resumeIfAutoPaused('workspace-switch');
+      }
+    };
+
+    this.hyprlandPoller = setInterval(poll, 2000);
+    win.on('closed', () => {
+      clearInterval(this.hyprlandPoller);
+      this.hyprlandPoller = null;
+    });
   }
 }
 
