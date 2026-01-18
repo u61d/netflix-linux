@@ -18,10 +18,11 @@ Netflix doesn't have a proper Linux desktop app. This fixes that.
 - Screenshot capture (F12)
 - Picture-in-Picture mode
 - Speed controls (0.25x to 4x)
+- Auto-pause on focus loss (workspace-aware on Hyprland)
 - Health reminders
 - Stats overlay with real-time metrics
 - Customizable keyboard shortcuts
-- Watch queue
+- Watch queue (experimental)
 - Wayland and tiling WM support (tested on Hyprland, i3, bspwm)
 
 **Privacy:**
@@ -204,6 +205,9 @@ Install one of: `paplay`, `pw-play`, or `canberra-gtk-play`
 
 ### Discord RPC not connecting
 Discord desktop client must be running. Browser version doesn't support RPC.
+
+### Watch queue
+Queue is experimental and may not populate on some Netflix layouts. Use `Ctrl+Shift+Q` to open it.
 
 ### Video won't play
 The app uses Castlabs Electron with Widevine DRM. Check logs in `~/.config/netflix-linux/logs/` if playback fails.

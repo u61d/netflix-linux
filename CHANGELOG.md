@@ -9,16 +9,23 @@
 - Import/export for settings
 - Drag-to-reorder profiles
 - Community can now update Netflix selectors without waiting for releases
+- Auto-pause/resume on focus loss with Hyprland workspace awareness
+- Auto-skip recap toggle in settings and menu
+- Discord RPC shows Linux distro name/icon when available
 
 ### Fixed
 - Profile switching doesn't lose your video position anymore
 - Infinite retry loops when opening settings/keybinds windows (caps at 20 now)
 - Missing error handling in player state tracking
 - Discord RPC uses exponential backoff instead of hammering the server
+- Watch history persists during playback and refreshes history window
+- Screenshot sound and capture are debounced to avoid duplicates
 
 ### Changed
 - Profile switching keeps main window open (was closing before)
 - Better error messages in renderer preloads
+- Stats overlay re-injects on navigation
+- Skip recap selector updated for newer Netflix markup
 
 ## [2.0.0] - 2025-07-12
 
