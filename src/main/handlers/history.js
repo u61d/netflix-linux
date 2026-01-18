@@ -57,5 +57,24 @@ module.exports = function setupHistoryHandlers(ctx) {
     }
   });
 
+  ipcMain.on('history:ready', (event) => {
+    ctx.logger.debug('History window ready');
+    try {
+      const history = ctx.store.get('watchHistory', []);
+      event.sender.send('history:data', history);
+    } catch (error) {
+      ctx.logger.error('history:ready error:', error);
+    }
+  });
+
+  ipcMain.on('history:request', (event) => {
+    try {
+      const history = ctx.store.get('watchHistory', []);
+      event.sender.send('history:data', history);
+    } catch (error) {
+      ctx.logger.error('history:request error:', error);
+    }
+  });
+
   ctx.logger.debug('History handlers registered');
 };

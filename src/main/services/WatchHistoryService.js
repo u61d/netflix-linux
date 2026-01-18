@@ -8,6 +8,8 @@ class WatchHistoryService {
     this.currentSession = null;
     this.sessionStartTime = null;
     this.lastValidTitle = null;
+    this.currentSessionIndex = null;
+    this.lastPersistAt = 0;
   }
 
   trackSession(playerData) {
@@ -35,31 +37,99 @@ class WatchHistoryService {
         startTimestamp: new Date(now).toISOString(),
       };
       this.sessionStartTime = now;
+      this.currentSessionIndex = null;
+      this.lastPersistAt = 0;
       this.ctx.logger.debug(`Started watching: ${playerData.title}`);
+    }
+
+    if (this.currentSession && isPlaying) {
+      const elapsedSeconds = Math.floor((now - this.sessionStartTime) / 1000);
+      if (elapsedSeconds >= 60 && now - this.lastPersistAt >= 15000) {
+        const persisted = this.persistCurrentSession(now, false);
+        if (persisted) {
+          this.lastPersistAt = now;
+        }
+      }
     }
 
     if (this.currentSession && (!isPlaying || this.currentSession.title !== playerData.title)) {
       const duration = Math.floor((now - this.sessionStartTime) / 1000 / 60);
 
-      if (duration >= 1) {
-        const history = this.ctx.store.get('watchHistory', []);
-
-        const sessionData = {
-          ...this.currentSession,
-          endTime: now,
-          endTimestamp: new Date(now).toISOString(),
-          duration,
-          durationSeconds: Math.floor((now - this.sessionStartTime) / 1000),
-        };
-
-        history.unshift(sessionData);
-
-        this.ctx.store.set('watchHistory', history.slice(0, 500));
+      const finalized = this.persistCurrentSession(now, true);
+      if (finalized) {
         this.ctx.logger.info(`✓ Saved session: ${this.currentSession.title} (${duration}m)`);
       }
 
       this.currentSession = null;
       this.sessionStartTime = null;
+      this.currentSessionIndex = null;
+      this.lastPersistAt = 0;
+    }
+  }
+
+  persistCurrentSession(now, isFinal) {
+    if (
+      !this.currentSession ||
+      this.sessionStartTime === null ||
+      this.sessionStartTime === undefined
+    ) {
+      return false;
+    }
+
+    const durationSeconds = Math.floor((now - this.sessionStartTime) / 1000);
+    const duration = Math.floor(durationSeconds / 60);
+
+    if (duration < 1 && isFinal && this.currentSessionIndex === null) {
+      return false;
+    }
+
+    if (duration < 1 && !isFinal) {
+      return false;
+    }
+
+    const history = this.ctx.store.get('watchHistory', []);
+
+    const sessionData = {
+      ...this.currentSession,
+      endTime: now,
+      endTimestamp: new Date(now).toISOString(),
+      duration,
+      durationSeconds,
+      inProgress: !isFinal,
+    };
+
+    if (this.currentSessionIndex === null) {
+      history.unshift(sessionData);
+      this.currentSessionIndex = 0;
+      this.ctx.store.set('watchHistory', history.slice(0, 500));
+      this.ctx.logger.debug(`History entries: ${history.length}`);
+      this.emitHistoryUpdated();
+      return true;
+    }
+
+    if (history[this.currentSessionIndex]) {
+      history[this.currentSessionIndex] = { ...history[this.currentSessionIndex], ...sessionData };
+      this.ctx.store.set('watchHistory', history.slice(0, 500));
+      this.ctx.logger.debug(`History entries: ${history.length}`);
+      this.emitHistoryUpdated();
+      return true;
+    }
+
+    return false;
+  }
+
+  emitHistoryUpdated() {
+    try {
+      const { BrowserWindow } = require('electron');
+      const windows = BrowserWindow.getAllWindows();
+      for (const win of windows) {
+        if (win.isDestroyed()) continue;
+        const url = win.webContents.getURL() || '';
+        if (!url.includes('history/index.html')) continue;
+        win.webContents.send('history:updated');
+      }
+    } catch (error) {
+      this.ctx.logger.debug('History update notify failed:', error.message);
     }
   }
 
