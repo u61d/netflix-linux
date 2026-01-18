@@ -168,7 +168,7 @@ describe('NotificationService', () => {
       const notificationInstance = Notification.mock.results[0].value;
       expect(Notification).toHaveBeenCalledWith(
         expect.objectContaining({
-          icon: '/path/to/icon.png',
+          icon: '../../../assets/icons/icon.png',
         })
       );
     });

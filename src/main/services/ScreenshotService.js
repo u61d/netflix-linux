@@ -7,6 +7,9 @@ class ScreenshotService {
   constructor(ctx) {
     this.ctx = ctx;
     this.soundMethod = null;
+    this.lastSoundAt = 0;
+    this.captureInProgress = false;
+    this.lastCaptureAt = 0;
   }
 
   ensureDirectory() {
@@ -19,6 +22,10 @@ class ScreenshotService {
 
   playSound() {
     if (!this.ctx.store.get('screenshotSound', false)) return;
+
+    const now = Date.now();
+    if (now - this.lastSoundAt < 1000) return;
+    this.lastSoundAt = now;
 
     if (this.soundMethod) {
       this.playSoundWithMethod(this.soundMethod);
@@ -84,6 +91,11 @@ class ScreenshotService {
     const win = this.ctx.getMainWindow();
     if (!win) return false;
 
+    const now = Date.now();
+    if (this.captureInProgress || now - this.lastCaptureAt < 500) return false;
+    this.captureInProgress = true;
+    this.lastCaptureAt = now;
+
     try {
       const image = await win.webContents.capturePage();
       const dir = this.ensureDirectory();
@@ -99,12 +111,13 @@ class ScreenshotService {
       this.playSound();
 
       if (this.ctx.store.get('screenshotNotification', true)) {
+        const silent = this.ctx.store.get('screenshotSound', false);
         const NotificationService = require('../utils/notifications');
         const notifier = new NotificationService(this.ctx);
         notifier.notify({
           title: 'Screenshot Saved',
           body: filename,
-          silent: false,
+          silent,
           priority: 'high',
         });
 
@@ -125,6 +138,8 @@ class ScreenshotService {
       });
       this.ctx.logger.error('Screenshot error:', error);
       return false;
+    } finally {
+      this.captureInProgress = false;
     }
   }
 
@@ -132,18 +147,24 @@ class ScreenshotService {
     const win = this.ctx.getMainWindow();
     if (!win) return false;
 
+    const now = Date.now();
+    if (this.captureInProgress || now - this.lastCaptureAt < 500) return false;
+    this.captureInProgress = true;
+    this.lastCaptureAt = now;
+
     try {
       const image = await win.webContents.capturePage();
       clipboard.writeImage(image);
 
       this.playSound();
 
+      const silent = this.ctx.store.get('screenshotSound', false);
       const NotificationService = require('../utils/notifications');
       const notifier = new NotificationService(this.ctx);
       notifier.notify({
         title: 'Screenshot Copied',
         body: 'Screenshot copied to clipboard',
-        silent: false,
+        silent,
         priority: 'high',
       });
 
@@ -159,6 +180,8 @@ class ScreenshotService {
       });
       this.ctx.logger.error('Copy screenshot error:', error);
       return false;
+    } finally {
+      this.captureInProgress = false;
     }
   }
 

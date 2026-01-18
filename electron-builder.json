@@ -7,7 +7,7 @@
   "linux": {
     "target": ["pacman", "AppImage", "deb"],
     "category": "Video;AudioVideo;Player",
-    "icon": "assets/icons/icon.svg",
+    "icon": "assets/icons/icon.png",
     "maintainer": "u61d",
     "executableArgs": ["--no-sandbox", "--disable-gpu-sandbox"],
 

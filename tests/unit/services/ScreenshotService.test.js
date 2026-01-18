@@ -219,12 +219,17 @@ describe('ScreenshotService', () => {
         if (key === 'screenshotSound') return true;
       });
       execSync.mockImplementation(() => {});
+      const dateNowSpy = jest
+        .spyOn(Date, 'now')
+        .mockReturnValueOnce(1000)
+        .mockReturnValueOnce(2101);
 
       service.playSound();
       execSync.mockClear();
       service.playSound();
       
       expect(execSync).toHaveBeenCalledTimes(1);
+      dateNowSpy.mockRestore();
     });
 
     it('should fallback to terminal bell if all methods fail', () => {

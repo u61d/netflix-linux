@@ -3,12 +3,16 @@ class StatsOverlay {
     this.ctx = ctx;
     this.interval = null;
     this.injected = false;
+    this.listenersAttached = false;
+    this.webContents = null;
+    this.handleNavigation = this.handleNavigation.bind(this);
   }
 
   start() {
     if (this.interval || !this.ctx.store.get('showDetailedStats')) return;
 
     this.inject();
+    this.attachListeners();
 
     this.interval = setInterval(async () => {
       await this.update();
@@ -23,6 +27,7 @@ class StatsOverlay {
       this.interval = null;
     }
     this.remove();
+    this.detachListeners();
     this.ctx.logger.info('Stats overlay stopped');
   }
 
@@ -104,6 +109,40 @@ class StatsOverlay {
 
     win.webContents.executeJavaScript(script, true);
     this.injected = true;
+  }
+
+  handleNavigation() {
+    if (!this.ctx.store.get('showDetailedStats')) return;
+    this.injected = false;
+    this.inject();
+  }
+
+  attachListeners() {
+    const win = this.ctx.getMainWindow();
+    if (!win || this.listenersAttached) return;
+
+    const wc = win.webContents;
+    if (!wc) return;
+
+    this.webContents = wc;
+    wc.on('dom-ready', this.handleNavigation);
+    wc.on('did-finish-load', this.handleNavigation);
+    wc.on('did-navigate', this.handleNavigation);
+    wc.on('did-navigate-in-page', this.handleNavigation);
+
+    this.listenersAttached = true;
+  }
+
+  detachListeners() {
+    if (!this.webContents || !this.listenersAttached) return;
+
+    this.webContents.removeListener('dom-ready', this.handleNavigation);
+    this.webContents.removeListener('did-finish-load', this.handleNavigation);
+    this.webContents.removeListener('did-navigate', this.handleNavigation);
+    this.webContents.removeListener('did-navigate-in-page', this.handleNavigation);
+
+    this.webContents = null;
+    this.listenersAttached = false;
   }
 
   async update() {
