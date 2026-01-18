@@ -34,13 +34,17 @@ class AutoSkipper {
 
     const { store } = this.ctx;
     const autoSkipIntro = store.get('autoSkipIntro', true);
+    const autoSkipRecap = store.get('autoSkipRecap', true);
     const autoSkipCredits = store.get('autoSkipCredits', false);
     const autoNextEpisode = store.get('autoNextEpisode', false);
 
     const selectorsToCheck = [];
 
     if (autoSkipIntro) {
-      selectorsToCheck.push(SKIP_SELECTORS.intro, SKIP_SELECTORS.recap);
+      selectorsToCheck.push(SKIP_SELECTORS.intro);
+    }
+    if (autoSkipRecap) {
+      selectorsToCheck.push(SKIP_SELECTORS.recap);
     }
     if (autoSkipCredits) {
       selectorsToCheck.push(SKIP_SELECTORS.credits);

@@ -1,5 +1,7 @@
 const { ipcMain } = require('electron');
 
+// TODO: Revisit queue UX improvements once the feature is stabilized.
+
 module.exports = function setupQueueHandlers(ctx) {
   ipcMain.handle('get-watch-queue', async () => {
     try {

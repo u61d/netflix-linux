@@ -182,6 +182,10 @@
         <label for="autoSkipIntro">Auto-skip intros</label>
       </div>
       <div class="setting">
+        <input type="checkbox" id="autoSkipRecap" />
+        <label for="autoSkipRecap">Auto-skip recaps</label>
+      </div>
+      <div class="setting">
         <input type="checkbox" id="autoSkipCredits" />
         <label for="autoSkipCredits">Auto-skip credits</label>
       </div>
@@ -358,9 +362,7 @@
         <input type="checkbox" id="sentryEnabled" />
         <label for="sentryEnabled">Allow crash reports (anonymous)</label>
       </div>
-      <div class="hint">
-        opt-in for sending sanitized error data. needs SENTRY_DSN env var
-      </div>
+      <div class="hint">opt-in for sending sanitized error data. needs SENTRY_DSN env var</div>
     </div>
 
     <div id="statusMessage"></div>
@@ -420,6 +422,7 @@
             document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
             document.getElementById('quietMode').checked = s.quietMode;
             document.getElementById('autoSkipIntro').checked = s.autoSkipIntro;
+            document.getElementById('autoSkipRecap').checked = s.autoSkipRecap;
             document.getElementById('autoSkipCredits').checked = s.autoSkipCredits;
             document.getElementById('autoNextEpisode').checked = s.autoNextEpisode;
             document.getElementById('autoPauseOnBlur').checked = s.autoPauseOnBlur;
@@ -455,6 +458,7 @@
               notificationsEnabled: document.getElementById('notificationsEnabled').checked,
               quietMode: document.getElementById('quietMode').checked,
               autoSkipIntro: document.getElementById('autoSkipIntro').checked,
+              autoSkipRecap: document.getElementById('autoSkipRecap').checked,
               autoSkipCredits: document.getElementById('autoSkipCredits').checked,
               autoNextEpisode: document.getElementById('autoNextEpisode').checked,
               autoPauseOnBlur: document.getElementById('autoPauseOnBlur').checked,

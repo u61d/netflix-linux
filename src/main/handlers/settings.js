@@ -10,6 +10,7 @@ module.exports = function setupSettingsHandlers(ctx) {
         discordEnabled: ctx.store.get('discordEnabled', true),
         playbackSpeed: ctx.store.get('playbackSpeed', 1.0),
         autoSkipIntro: ctx.store.get('autoSkipIntro', true),
+        autoSkipRecap: ctx.store.get('autoSkipRecap', true),
         autoSkipCredits: ctx.store.get('autoSkipCredits', false),
         autoNextEpisode: ctx.store.get('autoNextEpisode', false),
         screenshotsDir: ctx.store.get('screenshotsDir'),

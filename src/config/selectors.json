@@ -4,7 +4,7 @@
   "selectors": {
     "skip": {
       "intro": "[data-uia=\"player-skip-intro\"], button[aria-label=\"Skip Intro\"]",
-      "recap": "button[aria-label=\"Skip Recap\"]",
+      "recap": "[data-uia=\"player-skip-recap\"], button[aria-label=\"Skip Recap\"]",
       "credits": ".skip-credits button, [data-uia=\"skip-credits\"]",
       "nextEpisode": "[data-uia=\"next-episode-seamless-button\"]",
       "continueWatching": "button[aria-label=\"Continue Playing\"]"

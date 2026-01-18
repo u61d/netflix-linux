@@ -24,6 +24,9 @@ const VALIDATION_SCHEMAS = {
   autoSkipIntro: {
     type: 'boolean',
   },
+  autoSkipRecap: {
+    type: 'boolean',
+  },
   autoSkipCredits: {
     type: 'boolean',
   },

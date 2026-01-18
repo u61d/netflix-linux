@@ -63,6 +63,7 @@ class MenuManager {
             accelerator: 'Ctrl+Shift+H',
             click: () => windowManager.createHistoryWindow(),
           },
+          // TODO: Revisit watch queue UX once the feature is stabilized.
           {
             label: 'Clear History',
             click: () => this.clearHistory(),
@@ -89,7 +90,11 @@ class MenuManager {
           { type: 'separator' },
           {
             label: store.get('autoSkipIntro') ? '✓ Auto-Skip Intro' : 'Auto-Skip Intro',
-            click: () => this.toggleAutoSkip(),
+            click: () => this.toggleAutoSkip('autoSkipIntro'),
+          },
+          {
+            label: store.get('autoSkipRecap') ? '✓ Auto-Skip Recap' : 'Auto-Skip Recap',
+            click: () => this.toggleAutoSkip('autoSkipRecap'),
           },
           { type: 'separator' },
           {
@@ -163,14 +168,19 @@ class MenuManager {
     this.update();
   }
 
-  toggleAutoSkip() {
-    const enabled = !this.ctx.store.get('autoSkipIntro');
-    this.ctx.store.set('autoSkipIntro', enabled);
+  toggleAutoSkip(key = 'autoSkipIntro') {
+    const enabled = !this.ctx.store.get(key);
+    this.ctx.store.set(key, enabled);
+    const title =
+      {
+        autoSkipIntro: 'Auto-Skip Intro',
+        autoSkipRecap: 'Auto-Skip Recap',
+      }[key] || 'Auto-Skip';
 
     const NotificationService = require('../utils/notifications');
     const notifier = new NotificationService(this.ctx);
     notifier.notify({
-      title: 'Auto-Skip Intro',
+      title,
       body: enabled ? 'Enabled' : 'Disabled',
     });
 

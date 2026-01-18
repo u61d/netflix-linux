@@ -39,6 +39,7 @@ const DEFAULTS = {
 
   playbackSpeed: 1.0,
   autoSkipIntro: true,
+  autoSkipRecap: true,
   autoSkipCredits: false,
   autoNextEpisode: false,
   autoPauseOnBlur: false,
