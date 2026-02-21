@@ -375,8 +375,6 @@
     </div>
 
     <script>
-      console.log('[Settings] starting');
-
       let isInitialized = false;
       let initAttempts = 0;
       const MAX_INIT_ATTEMPTS = 20;
@@ -385,19 +383,16 @@
         if (isInitialized) return;
 
         initAttempts++;
-        console.log(`[Settings] checking API (attempt ${initAttempts}/${MAX_INIT_ATTEMPTS})`);
-
         if (!window.settingsAPI) {
           if (initAttempts >= MAX_INIT_ATTEMPTS) {
-            console.error('[Settings] API failed to load');
             document.body.innerHTML = `
             <div style="padding: 20px; color: #f44336; text-align: center;">
-              <h2>lmao</h2>
-              <p>settings won't load. try restarting the app</p>
+              <h2>Settings unavailable</h2>
+              <p>Could not load settings. Restart the app and try again.</p>
               <p style="font-size: 12px; color: #aaa; margin-top: 16px;">
-                if this keeps happening check logs in ~/.config/netflix-linux/logs/
+                If this keeps happening, check logs in ~/.config/netflix-linux/logs/
               </p>
-              <button onclick="window.close()" style="margin-top: 16px;">close</button>
+              <button onclick="window.close()" style="margin-top: 16px;">Close</button>
             </div>
           `;
             return;
@@ -408,15 +403,11 @@
         }
 
         isInitialized = true;
-        console.log('[Settings] API found');
-
         const { settingsAPI } = window;
 
         async function loadSettings() {
-          console.log('[Settings] loading');
           try {
             const s = await settingsAPI.getSettings();
-            console.log('[Settings] got:', s);
 
             document.getElementById('discordEnabled').checked = s.discordEnabled;
             document.getElementById('notificationsEnabled').checked = s.notificationsEnabled;
@@ -438,16 +429,12 @@
             document.getElementById('showDetailedStats').checked = s.showDetailedStats;
             document.getElementById('debugMode').checked = s.debugMode;
             document.getElementById('sentryEnabled').checked = s.sentryEnabled;
-
-            console.log('[Settings] UI ready');
           } catch (e) {
-            console.error('[Settings] error:', e);
-            showMessage('failed: ' + e.message, 'error');
+            showMessage('Failed to load settings: ' + e.message, 'error');
           }
         }
 
         async function saveSettings() {
-          console.log('[Settings] saving');
           const btn = document.getElementById('saveBtn');
           btn.disabled = true;
           btn.textContent = 'saving';
@@ -476,14 +463,11 @@
               sentryEnabled: document.getElementById('sentryEnabled').checked,
             };
 
-            console.log('[Settings] saving:', updates);
             await settingsAPI.updateSettings(updates);
-            console.log('[Settings] saved');
-            showMessage('saved! restart to apply', 'success');
+            showMessage('Saved. Restart the app to apply all changes.', 'success');
             setTimeout(() => window.close(), 800);
           } catch (e) {
-            console.error('[Settings] save error:', e);
-            showMessage('failed: ' + e.message, 'error');
+            showMessage('Failed to save settings: ' + e.message, 'error');
             btn.disabled = false;
             btn.textContent = 'Save (restart needed)';
           }
@@ -493,34 +477,33 @@
           try {
             const path = await settingsAPI.exportSettings();
             if (path) {
-              showMessage(`exported to ${path}`, 'success');
+              showMessage(`Exported to ${path}`, 'success');
             }
           } catch (e) {
-            showMessage('export failed: ' + e.message, 'error');
+            showMessage('Export failed: ' + e.message, 'error');
           }
         }
 
         async function importSettings() {
-          if (!confirm('this will overwrite current settings. continue?')) return;
+          if (!confirm('This will overwrite your current settings. Continue?')) return;
 
           try {
             const success = await settingsAPI.importSettings();
             if (success) {
-              showMessage('imported! restart to apply', 'success');
+              showMessage('Imported. Restart the app to apply all changes.', 'success');
               setTimeout(() => loadSettings(), 1000);
             }
           } catch (e) {
-            showMessage('import failed: ' + e.message, 'error');
+            showMessage('Import failed: ' + e.message, 'error');
           }
         }
 
         async function chooseDir() {
-          console.log('[Settings] choosing dir');
           try {
             const dir = await settingsAPI.chooseScreenshotDir();
             if (dir) document.getElementById('screenshotsDir').value = dir;
           } catch (e) {
-            showMessage('failed: ' + e.message, 'error');
+            showMessage('Failed to choose folder: ' + e.message, 'error');
           }
         }
 
@@ -533,13 +516,11 @@
           }, 3000);
         }
 
-        console.log('[Settings] attaching listeners');
         document.getElementById('chooseDir').onclick = chooseDir;
         document.getElementById('saveBtn').onclick = saveSettings;
         document.getElementById('cancelBtn').onclick = () => window.close();
         document.getElementById('exportBtn').onclick = exportSettings;
         document.getElementById('importBtn').onclick = importSettings;
-        console.log('[Settings] listeners attached');
 
         loadSettings();
       }

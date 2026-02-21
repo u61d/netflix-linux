@@ -8,6 +8,12 @@ jest.mock('electron', () => ({
   },
 }));
 
+jest.mock('../../../src/main/utils/environment', () =>
+  jest.fn().mockImplementation(() => ({
+    isHyprland: () => false,
+  }))
+);
+
 describe('WindowManager', () => {
   let ctx;
   let manager;

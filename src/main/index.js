@@ -17,8 +17,6 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
   app.commandLine.appendSwitch('disable-gpu-sandbox');
   app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-  app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
-  app.commandLine.appendSwitch('ignore-certificate-errors');
 }
 
 const SentryManager = require('./utils/sentry');
