@@ -4,6 +4,9 @@ Unofficial Netflix desktop client for Linux with DRM support, Discord Rich Prese
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-2.0.0-green.svg)
+![GitHub stars](https://img.shields.io/github/stars/u61d/netflix-linux?style=flat)
+![GitHub issues](https://img.shields.io/github/issues/u61d/netflix-linux?style=flat)
+![GitHub downloads](https://img.shields.io/github/downloads/u61d/netflix-linux/total?style=flat)
 
 ## Why?
 
@@ -24,6 +27,12 @@ Netflix doesn't have a proper Linux desktop app. This fixes that.
 - Customizable keyboard shortcuts
 - Watch queue (experimental)
 - Wayland and tiling WM support (tested on Hyprland, i3, bspwm)
+
+## Screenshots
+
+![UI Demo](assets/screenshots/ui-demo.gif)
+![Settings Window](assets/screenshots/settings-window.png)
+![Watch History Window](assets/screenshots/history-window.png)
 
 **Privacy:**
 - No tracking by default
@@ -223,6 +232,20 @@ PRs welcome. Please:
 **Note:** CI workflows use secrets (Sentry) that won't be available in forks. Maintainers handle releases.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Roadmap
+
+- Better queue reliability across Netflix UI variants
+- Better accessibility in settings/history windows
+- More end-to-end coverage for profile/queue flows
+- Packaging improvements (AUR/Flatpak support)
+
+## Help This Project Grow
+
+- Star the repo
+- Open issues when something breaks
+- Share release links in Linux communities
+- Contribute selector updates when Netflix changes UI
 
 ## License
 

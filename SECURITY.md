@@ -13,7 +13,7 @@ If you find a security vulnerability, please **do not** open a public issue.
 
 Instead:
 
-1. **Email**: Open an issue with title "Security: [brief description]" and request private disclosure
+1. **Initial contact**: Open an issue with title `Security: [brief description]` and request private disclosure
 2. **Include**:
    - Description of the vulnerability
    - Steps to reproduce

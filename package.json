@@ -13,12 +13,14 @@
     "netflix",
     "linux",
     "electron",
+    "desktop-client",
     "widevine",
     "drm",
     "streaming",
     "discord-rpc",
     "wayland",
-    "hyprland"
+    "hyprland",
+    "appimage"
   ],
   "scripts": {
     "start": "electron --no-sandbox --disable-gpu-sandbox .",

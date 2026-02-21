@@ -145,6 +145,7 @@ Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml). 
 - Better error messages
 - Performance improvements
 - Accessibility improvements
+- Netflix selector updates when UI changes
 
 **Medium Priority:**
 - New features (discuss in an issue first)
@@ -205,6 +206,14 @@ npm install
 ## Questions?
 
 Open an issue with the "question" label or start a discussion.
+
+## Discoverability Tasks
+
+If you want to help the project reach more users, these are useful:
+
+- Add/update screenshots and short demo clips for release notes
+- Improve release notes for each tag with clear feature/fix highlights
+- Help package and maintain community distributions (AUR/Flatpak)
 
 ## License
 
