@@ -11,8 +11,11 @@ class Logger {
       fs.mkdirSync(logDir, { recursive: true });
     }
 
+    const defaultLevel =
+      process.env.NETFLIX_LOG_LEVEL || (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
+
     this.logger = winston.createLogger({
-      level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+      level: defaultLevel,
       format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         winston.format.errors({ stack: true }),
@@ -57,6 +60,11 @@ class Logger {
 
   debug(message, ...args) {
     this.logger.debug(message, ...args);
+  }
+
+  setLevel(level = 'info') {
+    this.logger.level = level;
+    this.logger.info(`Logger level set to: ${level}`);
   }
 }
 

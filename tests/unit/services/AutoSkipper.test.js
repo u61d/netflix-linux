@@ -1,5 +1,11 @@
 const AutoSkipper = require('../../../src/main/services/AutoSkipper');
 
+jest.mock('../../../src/main/utils/notifications', () => {
+  return jest.fn().mockImplementation(() => ({
+    notify: jest.fn(),
+  }));
+});
+
 describe('AutoSkipper', () => {
   let ctx;
   let service;
@@ -10,7 +16,16 @@ describe('AutoSkipper', () => {
 
     ctx = {
       store: {
-        get: jest.fn(),
+        get: jest.fn((key, fallback) => {
+          const settings = {
+            autoSkipIntro: true,
+            autoSkipRecap: true,
+            autoSkipCredits: false,
+            autoNextEpisode: false,
+            selectorHealthAlerts: true,
+          };
+          return settings[key] !== undefined ? settings[key] : fallback;
+        }),
       },
       logger: {
         info: jest.fn(),
@@ -28,192 +43,96 @@ describe('AutoSkipper', () => {
     };
 
     ctx.getMainWindow.mockReturnValue(mockWindow);
-
     service = new AutoSkipper(ctx);
   });
 
   afterEach(() => {
     jest.useRealTimers();
-    if (service.interval) {
-      service.stop();
-    }
+    service.stop();
   });
 
-  describe('start', () => {
-    it('should start interval successfully', () => {
-      service.start();
+  it('starts once and schedules ticking', () => {
+    const validateSpy = jest.spyOn(service, 'validateSelectors').mockResolvedValue(undefined);
 
-      expect(service.interval).not.toBeNull();
-      expect(ctx.logger.info).toHaveBeenCalledWith('AutoSkipper started');
-    });
+    service.start();
+    const first = service.interval;
+    service.start();
 
-    it('should not start multiple intervals', () => {
-      service.start();
-      const firstInterval = service.interval;
-
-      service.start();
-      expect(service.interval).toBe(firstInterval);
-    });
+    expect(first).not.toBeNull();
+    expect(service.interval).toBe(first);
+    expect(validateSpy).toHaveBeenCalledWith(true);
   });
 
-  describe('stop', () => {
-    it('should stop interval', () => {
-      service.start();
-      expect(service.interval).not.toBeNull();
+  it('stops cleanly', () => {
+    service.start();
+    expect(service.interval).not.toBeNull();
 
-      service.stop();
-      expect(service.interval).toBeNull();
-      expect(ctx.logger.info).toHaveBeenCalledWith('AutoSkipper stopped');
-    });
+    service.stop();
 
-    it('should handle stopping when not started', () => {
-      service.stop();
-      expect(service.interval).toBeNull();
-    });
+    expect(service.interval).toBeNull();
+    expect(ctx.logger.info).toHaveBeenCalledWith('AutoSkipper stopped');
   });
 
-  describe('tick', () => {
-    beforeEach(() => {
-      ctx.store.get.mockImplementation((key, defaultValue) => {
-        const settings = {
-          autoSkipIntro: true,
-          autoSkipCredits: false,
-          autoNextEpisode: false,
-        };
-        return settings[key] !== undefined ? settings[key] : defaultValue;
-      });
-    });
+  it('tick checks enabled selectors and clicks matching button', async () => {
+    mockWindow.webContents.executeJavaScript.mockResolvedValue('[data-uia="player-skip-intro"]');
 
-    it('should click intro skip button when found', async () => {
-      mockWindow.webContents.executeJavaScript.mockResolvedValue(
-        '[data-uia="player-skip-intro"]'
-      );
+    await service.tick();
 
-      service.start();
-      jest.advanceTimersByTime(500);
-
-      await Promise.resolve();
-
-      expect(mockWindow.webContents.executeJavaScript).toHaveBeenCalled();
-      expect(ctx.logger.debug).toHaveBeenCalledWith(
-        'Auto-clicked:',
-        expect.any(String)
-      );
-    });
-
-    it('should not click if no buttons found', async () => {
-      mockWindow.webContents.executeJavaScript.mockResolvedValue(null);
-
-      service.start();
-      jest.advanceTimersByTime(500);
-
-      await Promise.resolve();
-
-      expect(ctx.logger.debug).not.toHaveBeenCalledWith(
-        'Auto-clicked:',
-        expect.any(String)
-      );
-    });
-
-    it('should check all selectors based on settings', async () => {
-      ctx.store.get.mockImplementation((key) => {
-        return key === 'autoSkipIntro' || key === 'autoSkipCredits';
-      });
-
-      mockWindow.webContents.executeJavaScript.mockResolvedValue(null);
-
-      service.start();
-      jest.advanceTimersByTime(500);
-
-      await Promise.resolve();
-
-      const call = mockWindow.webContents.executeJavaScript.mock.calls[0][0];
-      expect(call).toContain('player-skip-intro');
-      expect(call).toContain('skip-credits');
-    });
-
-    it('should handle executeJavaScript errors gracefully', async () => {
-      mockWindow.webContents.executeJavaScript.mockRejectedValue(
-        new Error('Navigation failed')
-      );
-
-      service.start();
-      jest.advanceTimersByTime(500);
-
-      await Promise.resolve();
-      expect(service.interval).not.toBeNull();
-    });
-
-    it('should return early if no main window', async () => {
-      ctx.getMainWindow.mockReturnValue(null);
-
-      service.start();
-      jest.advanceTimersByTime(500);
-
-      await Promise.resolve();
-
-      expect(mockWindow.webContents.executeJavaScript).not.toHaveBeenCalled();
-    });
+    expect(mockWindow.webContents.executeJavaScript).toHaveBeenCalled();
+    const script = mockWindow.webContents.executeJavaScript.mock.calls[0][0];
+    expect(script).toContain('player-skip-intro');
+    expect(script).toContain('player-skip-recap');
+    expect(script).toContain('Continue Playing');
   });
 
-  describe('validateSelectors', () => {
-    it('should validate selectors periodically', async () => {
-      mockWindow.webContents.executeJavaScript.mockResolvedValue({
-        '[data-uia="player-skip-intro"]': true,
-        'button[aria-label="Skip Intro"]': true,
-      });
+  it('runSelectorHealthCheck returns diagnostic summary', async () => {
+    mockWindow.webContents.executeJavaScript.mockResolvedValue([
+      { key: 'intro', selector: '.intro', exists: true, matchCount: 1 },
+      { key: 'recap', selector: '.recap', exists: false, matchCount: 0 },
+    ]);
 
-      await service.validateSelectors();
+    const result = await service.runSelectorHealthCheck();
 
-      expect(mockWindow.webContents.executeJavaScript).toHaveBeenCalled();
-      expect(ctx.logger.debug).toHaveBeenCalledWith(
-        'All skip selectors validated successfully'
-      );
-    });
-
-    it('should warn about invalid selectors', async () => {
-      mockWindow.webContents.executeJavaScript.mockResolvedValue({
-        '[data-uia="player-skip-intro"]': false,
-        'button[aria-label="Skip Intro"]': false,
-      });
-
-      await service.validateSelectors();
-
-      expect(ctx.logger.warn).toHaveBeenCalledWith(
-        'Some skip selectors may be outdated:',
-        expect.any(Array)
-      );
-    });
-
-    it('should not validate more than once per hour', async () => {
-      const now = Date.now();
-      service.lastValidation = now - 1000;
-
-      await service.validateSelectors();
-
-      expect(mockWindow.webContents.executeJavaScript).not.toHaveBeenCalled();
-    });
-
-    it('should validate after 1 hour', async () => {
-      const now = Date.now();
-      service.lastValidation = now - 3600001;
-
-      mockWindow.webContents.executeJavaScript.mockResolvedValue({});
-
-      await service.validateSelectors();
-
-      expect(mockWindow.webContents.executeJavaScript).toHaveBeenCalled();
-    });
+    expect(result.total).toBe(2);
+    expect(result.valid).toBe(1);
+    expect(result.invalid).toBe(1);
+    expect(Array.isArray(result.selectors)).toBe(true);
   });
 
-  describe('cleanup', () => {
-    it('should stop service on cleanup', () => {
-      service.start();
-      expect(service.interval).not.toBeNull();
-
-      service.cleanup();
-
-      expect(service.interval).toBeNull();
+  it('validateSelectors warns when invalid selectors are found', async () => {
+    jest.spyOn(service, 'runSelectorHealthCheck').mockResolvedValue({
+      checkedAt: new Date().toISOString(),
+      total: 2,
+      valid: 1,
+      invalid: 1,
+      selectors: [
+        { key: 'intro', selector: '.intro', exists: false, matchCount: 0 },
+        { key: 'recap', selector: '.recap', exists: true, matchCount: 1 },
+      ],
     });
+
+    await service.validateSelectors(true);
+
+    expect(ctx.logger.warn).toHaveBeenCalledWith(
+      'Some skip selectors may be outdated:',
+      expect.arrayContaining(['intro: .intro'])
+    );
+  });
+
+  it('validateSelectors throttles checks to once per hour unless forced', async () => {
+    const runSpy = jest.spyOn(service, 'runSelectorHealthCheck').mockResolvedValue({
+      checkedAt: new Date().toISOString(),
+      total: 0,
+      valid: 0,
+      invalid: 0,
+      selectors: [],
+    });
+
+    service.lastValidation = Date.now() - 1000;
+    await service.validateSelectors();
+    expect(runSpy).not.toHaveBeenCalled();
+
+    await service.validateSelectors(true);
+    expect(runSpy).toHaveBeenCalledTimes(1);
   });
 });

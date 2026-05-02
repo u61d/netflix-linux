@@ -1,9 +1,10 @@
 const { ipcMain } = require('electron');
+const { registerHandle, registerOn } = require('../utils/ipcTrace');
 
 module.exports = function setupHistoryHandlers(ctx) {
   const historyService = ctx.getService('history');
 
-  ipcMain.handle('get-watch-history', async () => {
+  registerHandle(ctx, ipcMain, 'get-watch-history', async () => {
     try {
       const history = ctx.store.get('watchHistory', []);
       ctx.logger.debug('Returning watch history:', history.length, 'entries');
@@ -14,7 +15,7 @@ module.exports = function setupHistoryHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('clear-watch-history', async () => {
+  registerHandle(ctx, ipcMain, 'clear-watch-history', async () => {
     try {
       ctx.store.set('watchHistory', []);
       ctx.logger.info('Watch history cleared');
@@ -25,7 +26,7 @@ module.exports = function setupHistoryHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('export-history', async () => {
+  registerHandle(ctx, ipcMain, 'export-history', async () => {
     try {
       if (historyService) {
         await historyService.export();
@@ -37,7 +38,7 @@ module.exports = function setupHistoryHandlers(ctx) {
     }
   });
 
-  ipcMain.on('player:update', (_event, payload) => {
+  registerOn(ctx, ipcMain, 'player:update', async (_event, payload) => {
     try {
       const rpcManager = ctx.getManager('rpc');
       if (rpcManager) {
@@ -57,7 +58,7 @@ module.exports = function setupHistoryHandlers(ctx) {
     }
   });
 
-  ipcMain.on('history:ready', (event) => {
+  registerOn(ctx, ipcMain, 'history:ready', async (event) => {
     ctx.logger.debug('History window ready');
     try {
       const history = ctx.store.get('watchHistory', []);
@@ -67,7 +68,7 @@ module.exports = function setupHistoryHandlers(ctx) {
     }
   });
 
-  ipcMain.on('history:request', (event) => {
+  registerOn(ctx, ipcMain, 'history:request', async (event) => {
     try {
       const history = ctx.store.get('watchHistory', []);
       event.sender.send('history:data', history);

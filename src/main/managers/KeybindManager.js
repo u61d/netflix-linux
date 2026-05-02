@@ -134,11 +134,13 @@ class KeybindManager {
     const playbackService = this.ctx.getService('playback');
     const historyService = this.ctx.getService('history');
     const statsOverlay = this.ctx.getService('statsOverlay');
+    const menuManager = this.ctx.getManager('menu');
 
     return {
       showStats: () => historyService?.showQuickStats(),
       showHistory: () => windowManager?.createHistoryWindow(),
       showQueue: () => windowManager?.createQueueWindow(),
+      addCurrentToQueue: () => menuManager?.addCurrentToQueue(),
       openSettings: () => windowManager?.createSettingsWindow(),
       openKeybinds: () => windowManager?.createKeybindsWindow(),
       openProfiles: () => windowManager?.createProfilesWindow(),

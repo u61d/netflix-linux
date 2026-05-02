@@ -1,11 +1,12 @@
 const { ipcMain } = require('electron');
 const { DEFAULT_KEYBINDS } = require('../../config/defaults');
 const ValidationService = require('../utils/validation');
+const { registerHandle } = require('../utils/ipcTrace');
 
 module.exports = function setupKeybindsHandlers(ctx) {
   const validator = new ValidationService();
 
-  ipcMain.handle('get-keybinds', async () => {
+  registerHandle(ctx, ipcMain, 'get-keybinds', async () => {
     try {
       const custom = ctx.store.get('customKeybinds', {});
       const merged = { ...DEFAULT_KEYBINDS, ...custom };
@@ -17,7 +18,7 @@ module.exports = function setupKeybindsHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('save-keybinds', async (_event, keybinds) => {
+  registerHandle(ctx, ipcMain, 'save-keybinds', async (_event, keybinds) => {
     try {
       if (!keybinds || typeof keybinds !== 'object') {
         throw new Error('Invalid keybinds object');
@@ -39,7 +40,7 @@ module.exports = function setupKeybindsHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('reset-keybinds', async () => {
+  registerHandle(ctx, ipcMain, 'reset-keybinds', async () => {
     try {
       ctx.store.set('customKeybinds', {});
       ctx.logger.info('Keybinds reset to defaults');

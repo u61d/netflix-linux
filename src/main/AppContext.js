@@ -6,6 +6,7 @@ class AppContext {
   constructor() {
     this.store = new Store({ name: 'settings', defaults: DEFAULTS });
     this.logger = new Logger();
+    this.logger.setLevel(this.store.get('debugMode', false) ? 'debug' : 'info');
     this.mainWindow = null;
     this.managers = {};
     this.services = {};

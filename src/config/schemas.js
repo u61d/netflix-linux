@@ -21,6 +21,13 @@ const VALIDATION_SCHEMAS = {
   discordEnabled: {
     type: 'boolean',
   },
+  autoCheckUpdates: {
+    type: 'boolean',
+  },
+  updateChannel: {
+    type: 'string',
+    enum: ['stable', 'beta'],
+  },
   autoSkipIntro: {
     type: 'boolean',
   },
@@ -51,6 +58,9 @@ const VALIDATION_SCHEMAS = {
   autoPauseOnBlur: {
     type: 'boolean',
   },
+  sessionRestoreEnabled: {
+    type: 'boolean',
+  },
   screenshotSound: {
     type: 'boolean',
   },
@@ -63,10 +73,26 @@ const VALIDATION_SCHEMAS = {
   showDetailedStats: {
     type: 'boolean',
   },
+  networkMetricsEnabled: {
+    type: 'boolean',
+  },
+  selectorHealthAlerts: {
+    type: 'boolean',
+  },
+  compactMode: {
+    type: 'boolean',
+  },
+  uiTheme: {
+    type: 'string',
+    enum: ['netflix-red', 'ocean', 'graphite', 'light'],
+  },
   debugMode: {
     type: 'boolean',
   },
   sentryEnabled: {
+    type: 'boolean',
+  },
+  crashSafeMode: {
     type: 'boolean',
   },
 };

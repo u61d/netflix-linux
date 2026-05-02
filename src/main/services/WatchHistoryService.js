@@ -10,10 +10,18 @@ class WatchHistoryService {
     this.lastValidTitle = null;
     this.currentSessionIndex = null;
     this.lastPersistAt = 0;
+    this.pauseStartedAt = null;
+    this.accumulatedPauseMs = 0;
+    this.pauseFinalizeGraceMs = 45000;
   }
 
   trackSession(playerData) {
     if (!playerData) return;
+
+    const currentUrl = String(playerData.url || '').toLowerCase();
+    const isBrowsePage =
+      currentUrl.includes('netflix.com/browse') && !playerData.season && !playerData.episode;
+    if (isBrowsePage) return;
 
     const title = playerData.title;
 
@@ -27,6 +35,11 @@ class WatchHistoryService {
     const now = Date.now();
     const isPlaying = playerData.playing;
 
+    if (this.currentSession && this.currentSession.title !== playerData.title) {
+      this.finalizeCurrentSession(now);
+      this.resetSessionState();
+    }
+
     if (isPlaying && !this.currentSession) {
       this.currentSession = {
         title: playerData.title,
@@ -39,31 +52,37 @@ class WatchHistoryService {
       this.sessionStartTime = now;
       this.currentSessionIndex = null;
       this.lastPersistAt = 0;
+      this.pauseStartedAt = null;
+      this.accumulatedPauseMs = 0;
       this.ctx.logger.debug(`Started watching: ${playerData.title}`);
     }
 
-    if (this.currentSession && isPlaying) {
-      const elapsedSeconds = Math.floor((now - this.sessionStartTime) / 1000);
+    if (!this.currentSession) return;
+
+    if (isPlaying) {
+      if (this.pauseStartedAt) {
+        this.accumulatedPauseMs += now - this.pauseStartedAt;
+        this.pauseStartedAt = null;
+      }
+
+      const elapsedSeconds = Math.floor(this.getActiveElapsedMs(now) / 1000);
       if (elapsedSeconds >= 60 && now - this.lastPersistAt >= 15000) {
         const persisted = this.persistCurrentSession(now, false);
         if (persisted) {
           this.lastPersistAt = now;
         }
       }
+      return;
     }
 
-    if (this.currentSession && (!isPlaying || this.currentSession.title !== playerData.title)) {
-      const duration = Math.floor((now - this.sessionStartTime) / 1000 / 60);
+    if (!this.pauseStartedAt) {
+      this.pauseStartedAt = now;
+      return;
+    }
 
-      const finalized = this.persistCurrentSession(now, true);
-      if (finalized) {
-        this.ctx.logger.info(`✓ Saved session: ${this.currentSession.title} (${duration}m)`);
-      }
-
-      this.currentSession = null;
-      this.sessionStartTime = null;
-      this.currentSessionIndex = null;
-      this.lastPersistAt = 0;
+    if (now - this.pauseStartedAt >= this.pauseFinalizeGraceMs) {
+      this.finalizeCurrentSession(now);
+      this.resetSessionState();
     }
   }
 
@@ -76,7 +95,7 @@ class WatchHistoryService {
       return false;
     }
 
-    const durationSeconds = Math.floor((now - this.sessionStartTime) / 1000);
+    const durationSeconds = Math.floor(this.getActiveElapsedMs(now) / 1000);
     const duration = Math.floor(durationSeconds / 60);
 
     if (duration < 1 && isFinal && this.currentSessionIndex === null) {
@@ -116,6 +135,36 @@ class WatchHistoryService {
     }
 
     return false;
+  }
+
+  getActiveElapsedMs(now) {
+    if (
+      !this.currentSession ||
+      this.sessionStartTime === null ||
+      this.sessionStartTime === undefined
+    ) {
+      return 0;
+    }
+    const livePausedMs = this.pauseStartedAt ? now - this.pauseStartedAt : 0;
+    const activeMs = now - this.sessionStartTime - this.accumulatedPauseMs - livePausedMs;
+    return Math.max(0, activeMs);
+  }
+
+  finalizeCurrentSession(now) {
+    const duration = Math.floor(this.getActiveElapsedMs(now) / 1000 / 60);
+    const finalized = this.persistCurrentSession(now, true);
+    if (finalized) {
+      this.ctx.logger.info(`✓ Saved session: ${this.currentSession.title} (${duration}m)`);
+    }
+  }
+
+  resetSessionState() {
+    this.currentSession = null;
+    this.sessionStartTime = null;
+    this.currentSessionIndex = null;
+    this.lastPersistAt = 0;
+    this.pauseStartedAt = null;
+    this.accumulatedPauseMs = 0;
   }
 
   emitHistoryUpdated() {
@@ -267,6 +316,13 @@ ${history
     setTimeout(() => {
       shell.showItemInFolder(filePath);
     }, 1000);
+  }
+
+  cleanup() {
+    if (this.currentSession) {
+      this.finalizeCurrentSession(Date.now());
+      this.resetSessionState();
+    }
   }
 }
 

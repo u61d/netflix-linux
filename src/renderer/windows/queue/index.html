@@ -12,21 +12,6 @@
     <style>
       :root {
         color-scheme: dark;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-        --bg-primary: #0b0b0d;
-        --bg-secondary: #141418;
-        --border: #222;
-        --text-primary: #f5f5f5;
-        --text-secondary: #aaa;
-        --text-tertiary: #888;
-        --accent: #e50914;
-        --accent-hover: #f40612;
-      }
-
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
       }
 
       body {
@@ -43,17 +28,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 12px;
         padding-bottom: 12px;
         border-bottom: 2px solid var(--border);
-      }
-
-      .title-icon {
-        width: 20px;
-        height: 20px;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2;
-        margin-right: 8px;
       }
 
       .title-label {
@@ -62,99 +39,136 @@
         gap: 8px;
       }
 
-      button {
-        padding: 8px 14px;
-        border-radius: 6px;
-        border: none;
-        background: var(--accent);
-        color: white;
-        cursor: pointer;
-        font-weight: 500;
-        font-size: 13px;
-        transition: all 0.2s;
+      .title-icon {
+        width: 20px;
+        height: 20px;
       }
 
-      button:hover {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-      }
-
-      button.secondary {
-        background: #333;
-      }
-
-      button.secondary:hover {
-        background: #444;
+      .actions {
+        display: flex;
+        gap: 8px;
       }
 
       .queue-list {
-        margin-top: 16px;
+        margin-top: 12px;
       }
 
       .queue-item {
         background: var(--bg-secondary);
-        padding: 14px;
+        padding: 12px;
         margin-bottom: 10px;
         border-radius: 8px;
         border: 1px solid var(--border);
-        transition: all 0.2s;
-        display: flex;
-        justify-content: space-between;
+        transition: border-color 0.2s ease;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
         align-items: center;
       }
 
-      .queue-item:hover {
+      .queue-item.dragging {
+        opacity: 0.6;
         border-color: var(--accent);
-        transform: translateX(4px);
+      }
+
+      .queue-item.drag-over {
+        border-color: var(--accent-light);
+      }
+
+      .drag-handle {
+        cursor: grab;
+        color: var(--text-secondary);
+        user-select: none;
+        font-size: 16px;
       }
 
       .queue-item-info {
-        flex: 1;
+        min-width: 0;
       }
 
       .queue-item .title {
         font-size: 15px;
         font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 6px;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .queue-item .metadata {
         font-size: 12px;
         color: var(--text-tertiary);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
       }
 
-      .no-queue {
+      .item-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .item-actions button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .empty {
         text-align: center;
-        padding: 80px 20px;
+        padding: 70px 20px;
         color: var(--text-tertiary);
       }
 
-      .no-queue svg {
-        width: 64px;
-        height: 64px;
-        margin-bottom: 16px;
-        opacity: 0.3;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2;
+      .search-wrap {
+        margin-bottom: 12px;
       }
 
-      .no-queue p {
-        font-size: 16px;
-        margin-bottom: 8px;
+      .search-wrap input {
+        width: 100%;
       }
 
-      .no-queue .hint {
+      .status {
+        margin-top: 10px;
+        font-size: 12px;
+      }
+
+      .status.error {
+        color: var(--error);
+      }
+
+      .status.success {
+        color: var(--success);
+      }
+
+      body.compact-mode h1 {
+        font-size: 17px;
+      }
+
+      body.compact-mode .queue-item {
+        padding: 8px;
+      }
+
+      body.compact-mode .queue-item .title {
         font-size: 13px;
-        color: var(--text-tertiary);
+      }
+
+      body.compact-mode .queue-item .metadata,
+      body.compact-mode .item-actions button {
+        font-size: 11px;
       }
     </style>
   </head>
   <body>
     <h1>
       <div class="title-label">
-        <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <svg
+          class="title-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <line x1="8" y1="6" x2="21" y2="6" />
           <line x1="8" y1="12" x2="21" y2="12" />
           <line x1="8" y1="18" x2="21" y2="18" />
@@ -164,29 +178,29 @@
         </svg>
         <span>Watch Queue</span>
       </div>
+      <div class="actions">
+        <button class="secondary" id="playNextBtn" type="button">Play Next</button>
+        <button class="secondary" id="dedupeBtn" type="button">Dedupe</button>
+        <button class="secondary" id="clearBtn" type="button">Clear</button>
+      </div>
     </h1>
 
-    <div id="queueContainer" class="queue-list">
-      <div class="no-queue">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <line x1="8" y1="6" x2="21" y2="6" />
-          <line x1="8" y1="12" x2="21" y2="12" />
-          <line x1="8" y1="18" x2="21" y2="18" />
-          <line x1="3" y1="6" x2="3.01" y2="6" />
-          <line x1="3" y1="12" x2="3.01" y2="12" />
-          <line x1="3" y1="18" x2="3.01" y2="18" />
-        </svg>
-        <p>Queue is empty</p>
-        <div class="hint">Your watch queue will appear here</div>
-      </div>
+    <div class="search-wrap">
+      <input id="searchInput" type="text" placeholder="Filter queue..." />
     </div>
+
+    <div id="queueContainer" class="queue-list"></div>
+    <div id="status" class="status"></div>
 
     <script>
       const { queueAPI } = window;
+      let queue = [];
+      let dragItemId = null;
 
       function formatDate(timestamp) {
+        if (!timestamp) return '—';
         const date = new Date(timestamp);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
@@ -194,67 +208,207 @@
         });
       }
 
-      function renderQueue(queue) {
-        const container = document.getElementById('queueContainer');
+      function showStatus(message, type = 'success') {
+        const el = document.getElementById('status');
+        el.className = `status ${type}`;
+        el.textContent = message;
+        setTimeout(() => {
+          if (el.textContent === message) el.textContent = '';
+        }, 3000);
+      }
 
-        if (!queue || queue.length === 0) {
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function render(items) {
+        const container = document.getElementById('queueContainer');
+        if (!items.length) {
           container.innerHTML = `
-          <div class="no-queue">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <line x1="8" y1="6" x2="21" y2="6"/>
-              <line x1="8" y1="12" x2="21" y2="12"/>
-              <line x1="8" y1="18" x2="21" y2="18"/>
-              <line x1="3" y1="6" x2="3.01" y2="6"/>
-              <line x1="3" y1="12" x2="3.01" y2="12"/>
-              <line x1="3" y1="18" x2="3.01" y2="18"/>
-            </svg>
-            <p>Queue is empty</p>
-            <div class="hint">Your watch queue will appear here</div>
-          </div>
-        `;
+            <div class="empty">
+              <p>Queue is empty.</p>
+              <div>Use the hover-card queue button or the queue shortcut while browsing Netflix.</div>
+            </div>
+          `;
           return;
         }
 
-        container.innerHTML = queue
-          .map(
-            (item, index) => `
-        <div class="queue-item">
-          <div class="queue-item-info">
-            <div class="title">${item.title || 'Unknown Title'}</div>
-            <div class="metadata">Added ${formatDate(item.addedAt)}</div>
-          </div>
-          <button class="secondary" onclick="removeItem(${index})">Remove</button>
-        </div>
-      `
-          )
+        container.innerHTML = items
+          .map((item, index) => {
+            const pinned = item.pinned ? 'Pinned' : 'Normal';
+            return `
+              <div class="queue-item" draggable="true" data-index="${index}" data-id="${escapeHtml(item.id)}">
+                <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+                <div class="queue-item-info">
+                  <div class="title">${escapeHtml(item.title || 'Unknown Title')}</div>
+                  <div class="metadata">
+                    <span>Added ${formatDate(item.addedAt)}</span>
+                    <span>Last played ${formatDate(item.lastPlayedAt)}</span>
+                    <span>${pinned}</span>
+                  </div>
+                </div>
+                <div class="item-actions">
+                  <button class="secondary" type="button" onclick="togglePin('${escapeHtml(item.id)}', ${item.pinned ? 'false' : 'true'})">${item.pinned ? 'Unpin' : 'Pin'}</button>
+                  <button class="secondary" type="button" onclick="playItem('${escapeHtml(item.id)}')">Play</button>
+                  <button class="secondary" type="button" onclick="removeItem('${escapeHtml(item.id)}')">Remove</button>
+                </div>
+              </div>
+            `;
+          })
           .join('');
+
+        attachDragAndDrop();
+      }
+
+      function attachDragAndDrop() {
+        const nodes = document.querySelectorAll('.queue-item');
+        nodes.forEach((node) => {
+          node.addEventListener('dragstart', () => {
+            dragItemId = node.dataset.id || null;
+            node.classList.add('dragging');
+          });
+
+          node.addEventListener('dragend', () => {
+            dragItemId = null;
+            node.classList.remove('dragging');
+            node.classList.remove('drag-over');
+          });
+
+          node.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            node.classList.add('drag-over');
+          });
+
+          node.addEventListener('dragleave', () => {
+            node.classList.remove('drag-over');
+          });
+
+          node.addEventListener('drop', async (event) => {
+            event.preventDefault();
+            node.classList.remove('drag-over');
+            const toId = node.dataset.id || null;
+            if (!dragItemId || !toId || dragItemId === toId) return;
+
+            const fromIndex = queue.findIndex((entry) => entry.id === dragItemId);
+            const toIndex = queue.findIndex((entry) => entry.id === toId);
+            if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+            try {
+              await queueAPI.reorderQueue(fromIndex, toIndex);
+              await loadQueue();
+              showStatus('Queue reordered');
+            } catch (error) {
+              showStatus(`Reorder failed: ${error.message}`, 'error');
+            }
+          });
+        });
       }
 
       async function loadQueue() {
         try {
-          const queue = await queueAPI.getQueue();
-          renderQueue(queue || []);
-        } catch (e) {
-          console.error('Load queue error:', e);
-          document.getElementById('queueContainer').innerHTML = `
-          <div class="no-queue">
-            <p style="color: #f44336;">Failed to load queue</p>
-            <div class="hint">${e.message}</div>
-          </div>
-        `;
+          queue = await queueAPI.getQueue();
+          applyFilter();
+        } catch (error) {
+          showStatus(`Load failed: ${error.message}`, 'error');
+          document.getElementById('queueContainer').innerHTML =
+            '<div class="empty">Failed to load queue.</div>';
         }
       }
 
-      async function removeItem(index) {
+      function applyFilter() {
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+        if (!query) {
+          render(queue);
+          return;
+        }
+        render(
+          queue.filter((entry) =>
+            `${entry.title || ''} ${entry.url || ''}`.toLowerCase().includes(query)
+          )
+        );
+      }
+
+      async function removeItem(id) {
         try {
-          await queueAPI.removeFromQueue(index);
+          await queueAPI.removeFromQueue(id);
           await loadQueue();
-        } catch (e) {
-          alert('Failed to remove item: ' + e.message);
+          showStatus('Item removed');
+        } catch (error) {
+          showStatus(`Remove failed: ${error.message}`, 'error');
+        }
+      }
+
+      async function togglePin(id, pinned) {
+        try {
+          await queueAPI.pinItem(id, pinned);
+          await loadQueue();
+          showStatus(pinned ? 'Item pinned' : 'Item unpinned');
+        } catch (error) {
+          showStatus(`Pin failed: ${error.message}`, 'error');
+        }
+      }
+
+      async function playItem(id) {
+        try {
+          const item = await queueAPI.playNext(id);
+          if (item) {
+            showStatus(`Playing: ${item.title}`);
+            await loadQueue();
+          }
+        } catch (error) {
+          showStatus(`Play failed: ${error.message}`, 'error');
+        }
+      }
+
+      async function playNext() {
+        try {
+          const item = await queueAPI.playNext();
+          if (!item) {
+            showStatus('Queue is empty', 'error');
+            return;
+          }
+          showStatus(`Playing: ${item.title}`);
+          await loadQueue();
+        } catch (error) {
+          showStatus(`Play next failed: ${error.message}`, 'error');
+        }
+      }
+
+      async function clearQueue() {
+        if (!confirm('Clear the entire queue?')) return;
+        try {
+          await queueAPI.clearQueue();
+          await loadQueue();
+          showStatus('Queue cleared');
+        } catch (error) {
+          showStatus(`Clear failed: ${error.message}`, 'error');
+        }
+      }
+
+      async function dedupeQueue() {
+        try {
+          const result = await queueAPI.dedupeQueue();
+          await loadQueue();
+          showStatus(`Removed ${result.removed || 0} duplicate item(s)`);
+        } catch (error) {
+          showStatus(`Dedupe failed: ${error.message}`, 'error');
         }
       }
 
       window.removeItem = removeItem;
+      window.playItem = playItem;
+      window.togglePin = togglePin;
+
+      document.getElementById('searchInput').addEventListener('input', applyFilter);
+      document.getElementById('playNextBtn').addEventListener('click', playNext);
+      document.getElementById('clearBtn').addEventListener('click', clearQueue);
+      document.getElementById('dedupeBtn').addEventListener('click', dedupeQueue);
+
       window.addEventListener('DOMContentLoaded', loadQueue);
     </script>
   </body>

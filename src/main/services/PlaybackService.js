@@ -9,6 +9,7 @@ class PlaybackService {
     this.speedNotificationTimer = null;
     this.lastSpeedNotification = null;
     this.autoPaused = false;
+    this.restoreInFlight = false;
   }
 
   async setSpeed(speed) {
@@ -85,6 +86,8 @@ class PlaybackService {
   autoApplySpeed(playerData) {
     if (!playerData || !playerData.title) return;
 
+    this.persistSessionState(playerData);
+
     const desiredSpeed = this.ctx.store.get('playbackSpeed', 1.0);
     if (desiredSpeed === 1.0) {
       this.lastAppliedContent = null;
@@ -157,6 +160,93 @@ class PlaybackService {
     } catch (error) {
       this.ctx.logger.error('Volume adjustment error:', error);
       return null;
+    }
+  }
+
+  persistSessionState(playerData) {
+    if (!this.ctx.store.get('sessionRestoreEnabled', true)) return;
+    if (!playerData || !Number.isFinite(playerData.position)) return;
+    if (!playerData.title || playerData.title === 'Netflix') return;
+
+    const safeDuration = Number.isFinite(playerData.duration) ? playerData.duration : 0;
+    const safePosition = Math.max(0, Number(playerData.position) || 0);
+    const payload = {
+      title: playerData.title,
+      season: Number.isInteger(playerData.season) ? playerData.season : null,
+      episode: Number.isInteger(playerData.episode) ? playerData.episode : null,
+      episodeTitle: playerData.episodeTitle || null,
+      duration: safeDuration,
+      position: safePosition,
+      playbackRate: Number(playerData.playbackRate) || this.ctx.store.get('playbackSpeed', 1.0),
+      url: playerData.url || null,
+      updatedAt: Date.now(),
+    };
+
+    if (safeDuration > 0 && safePosition / safeDuration > 0.98) {
+      return;
+    }
+
+    this.ctx.store.set('lastSessionState', payload);
+  }
+
+  getRestorableSession(maxAgeHours = 12) {
+    const last = this.ctx.store.get('lastSessionState', null);
+    if (!last || !last.updatedAt) return null;
+    const ageMs = Date.now() - Number(last.updatedAt);
+    if (ageMs > maxAgeHours * 3600 * 1000) return null;
+    if (!Number.isFinite(last.position) || last.position < 10) return null;
+    return last;
+  }
+
+  async restorePreviousSession() {
+    if (this.restoreInFlight || !this.ctx.store.get('sessionRestoreEnabled', true)) return false;
+
+    const session = this.getRestorableSession();
+    if (!session) return false;
+
+    const win = this.ctx.getMainWindow();
+    if (!win || win.isDestroyed()) return false;
+
+    this.restoreInFlight = true;
+    try {
+      const currentUrl = win.webContents.getURL() || '';
+      if (session.url && session.url.includes('netflix.com') && currentUrl !== session.url) {
+        await win.loadURL(session.url);
+      }
+
+      let restored = false;
+      for (let i = 0; i < 24; i++) {
+        const script = `
+          (function() {
+            const video = document.querySelector('video');
+            if (!video) return { restored: false, reason: 'no-video' };
+            const desired = ${Number(session.position)};
+            const duration = Number(video.duration) || 0;
+            const safeTarget = duration > 0 ? Math.min(desired, Math.max(duration - 2, 0)) : desired;
+            video.currentTime = safeTarget;
+            video.playbackRate = ${Math.max(0.25, Math.min(4, Number(session.playbackRate) || 1))};
+            return { restored: true, at: video.currentTime, duration };
+          })();
+        `;
+        const result = await win.webContents.executeJavaScript(script, true);
+        if (result?.restored) {
+          restored = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      if (restored) {
+        this.ctx.logger.info(
+          `Session restored: ${session.title} @ ${Math.round(Number(session.position))}s`
+        );
+      }
+      return restored;
+    } catch (error) {
+      this.ctx.logger.error('restorePreviousSession error:', error);
+      return false;
+    } finally {
+      this.restoreInFlight = false;
     }
   }
 
@@ -404,6 +494,37 @@ class PlaybackService {
       return await win.webContents.executeJavaScript(script, true);
     } catch (error) {
       this.ctx.logger.error('getState error:', error);
+      return null;
+    }
+  }
+
+  async getNetworkMetrics() {
+    const win = this.ctx.getMainWindow();
+    if (!win) return null;
+
+    const script = `
+      (function() {
+        const video = document.querySelector('video');
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        const quality = video?.getVideoPlaybackQuality ? video.getVideoPlaybackQuality() : null;
+        return {
+          effectiveType: conn?.effectiveType || null,
+          downlink: conn?.downlink || null,
+          rtt: conn?.rtt || null,
+          saveData: conn?.saveData || false,
+          decodedFrames: quality?.totalVideoFrames || null,
+          droppedFrames: quality?.droppedVideoFrames || null,
+          webkitDecodedByteCount: video?.webkitVideoDecodedByteCount || null,
+          readyState: video?.readyState ?? null,
+          networkState: video?.networkState ?? null,
+        };
+      })();
+    `;
+
+    try {
+      return await win.webContents.executeJavaScript(script, true);
+    } catch (error) {
+      this.ctx.logger.error('getNetworkMetrics error:', error);
       return null;
     }
   }

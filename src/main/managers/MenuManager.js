@@ -63,7 +63,17 @@ class MenuManager {
             accelerator: 'Ctrl+Shift+H',
             click: () => windowManager.createHistoryWindow(),
           },
-          // TODO: Revisit watch queue UX once the feature is stabilized.
+          {
+            label: 'Add Current Title to Queue',
+            accelerator: 'Ctrl+Shift+A',
+            click: () => this.addCurrentToQueue(),
+          },
+          {
+            label: 'Open Queue',
+            accelerator: 'Ctrl+Shift+Q',
+            click: () => windowManager.createQueueWindow(),
+          },
+          { type: 'separator' },
           {
             label: 'Clear History',
             click: () => this.clearHistory(),
@@ -215,6 +225,89 @@ class MenuManager {
       title: 'History Cleared',
       body: 'Watch history reset',
     });
+  }
+
+  async addCurrentToQueue() {
+    const win = this.ctx.getMainWindow();
+    if (!win || win.isDestroyed()) return;
+
+    const normalize = (value) =>
+      String(value || '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const sortQueue = (queue) =>
+      [...queue].sort((a, b) => {
+        const aPinned = a?.pinned ? 1 : 0;
+        const bPinned = b?.pinned ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned;
+        return (a.order ?? 0) - (b.order ?? 0);
+      });
+
+    try {
+      const current = await win.webContents.executeJavaScript(
+        `
+        (function() {
+          const titleEl = document.querySelector(
+            'h4.ellipsize-text, [data-uia="video-title"], .video-title h4, .player-status-main-title'
+          );
+          const titleText = (titleEl?.textContent || document.title || '').split('\\n')[0].trim();
+          return {
+            title: titleText.replace(/\\s+-\\s+Netflix$/i, ''),
+            url: window.location.href
+          };
+        })();
+      `,
+        true
+      );
+
+      const title = String(current?.title || '').trim() || 'Netflix';
+      const url = String(current?.url || win.webContents.getURL() || '').trim();
+      if (!url.startsWith('https://www.netflix.com')) {
+        throw new Error('Not on a netflix.com page');
+      }
+
+      const queue = this.ctx.store.get('watchQueue', []);
+      const normalizedTitle = normalize(title);
+      const existingIndex = queue.findIndex(
+        (entry) => entry.url === url || normalize(entry.title) === normalizedTitle
+      );
+
+      const nextItem = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        url,
+        addedAt: Date.now(),
+        lastPlayedAt: null,
+        pinned: false,
+      };
+
+      if (existingIndex >= 0) {
+        const existing = queue[existingIndex];
+        queue[existingIndex] = {
+          ...existing,
+          ...nextItem,
+          id: existing.id,
+          dedupedAt: Date.now(),
+        };
+      } else {
+        queue.push(nextItem);
+      }
+
+      const sorted = sortQueue(queue).map((entry, index) => ({ ...entry, order: index }));
+      this.ctx.store.set('watchQueue', sorted);
+
+      const NotificationService = require('../utils/notifications');
+      const notifier = new NotificationService(this.ctx);
+      notifier.notify({
+        title: existingIndex >= 0 ? 'Queue Updated' : 'Added to Queue',
+        body: title,
+        priority: 'high',
+      });
+    } catch (error) {
+      this.ctx.logger.error('addCurrentToQueue error:', error);
+    }
   }
 
   switchProfile(id) {

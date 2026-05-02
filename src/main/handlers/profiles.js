@@ -1,10 +1,11 @@
 const { ipcMain } = require('electron');
 const ValidationService = require('../utils/validation');
+const { registerHandle } = require('../utils/ipcTrace');
 
 module.exports = function setupProfilesHandlers(ctx) {
   const validator = new ValidationService();
 
-  ipcMain.handle('get-profiles', async () => {
+  registerHandle(ctx, ipcMain, 'get-profiles', async () => {
     try {
       return {
         profiles: ctx.store.get('profiles', {}),
@@ -16,7 +17,7 @@ module.exports = function setupProfilesHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('add-profile', async (_event, { id, name, url }) => {
+  registerHandle(ctx, ipcMain, 'add-profile', async (_event, { id, name, url }) => {
     try {
       const safeId = validator.sanitizeString(id);
       const safeName = validator.sanitizeString(name);
@@ -43,7 +44,7 @@ module.exports = function setupProfilesHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('delete-profile', async (_event, id) => {
+  registerHandle(ctx, ipcMain, 'delete-profile', async (_event, id) => {
     try {
       const safeId = validator.sanitizeString(id);
 
@@ -68,7 +69,7 @@ module.exports = function setupProfilesHandlers(ctx) {
     }
   });
 
-  ipcMain.handle('switch-profile', async (_event, id) => {
+  registerHandle(ctx, ipcMain, 'switch-profile', async (_event, id) => {
     try {
       const safeId = validator.sanitizeString(id);
       const profiles = ctx.store.get('profiles', {});

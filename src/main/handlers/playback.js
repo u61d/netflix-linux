@@ -1,7 +1,8 @@
 const { ipcMain } = require('electron');
+const { registerOn } = require('../utils/ipcTrace');
 
 module.exports = function setupPlaybackHandlers(ctx) {
-  ipcMain.on('playback:auto-pause', (_event, reason) => {
+  registerOn(ctx, ipcMain, 'playback:auto-pause', async (_event, reason) => {
     try {
       if (!ctx.store.get('autoPauseOnBlur', false)) return;
 
@@ -14,7 +15,7 @@ module.exports = function setupPlaybackHandlers(ctx) {
     }
   });
 
-  ipcMain.on('playback:auto-resume', (_event, reason) => {
+  registerOn(ctx, ipcMain, 'playback:auto-resume', async (_event, reason) => {
     try {
       if (!ctx.store.get('autoPauseOnBlur', false)) return;
 

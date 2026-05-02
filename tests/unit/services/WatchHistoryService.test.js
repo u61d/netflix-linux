@@ -69,8 +69,8 @@ describe('Watch history IPC and service integration', () => {
   });
 
   it('stores sessions on playback end and clears correctly', async () => {
-    const times = [0, 62_000, 130_000, 200_000];
-    dateNowSpy = jest.spyOn(Date, 'now').mockImplementation(() => times.shift() ?? 200_000);
+    const times = [0, 62_000, 120_000, 130_000, 192_000, 260_000];
+    dateNowSpy = jest.spyOn(Date, 'now').mockImplementation(() => times.shift() ?? 260_000);
 
     const playerUpdateCall = ipcMain.on.mock.calls.find(([name]) => name === 'player:update');
     expect(playerUpdateCall).toBeDefined();
@@ -79,9 +79,11 @@ describe('Watch history IPC and service integration', () => {
     
     playerUpdate(null, { title: 'Show A', playing: true });
     playerUpdate(null, { title: 'Show A', playing: false });
+    playerUpdate(null, { title: 'Show A', playing: false });
 
     
     playerUpdate(null, { title: 'Show B', playing: true });
+    playerUpdate(null, { title: 'Show B', playing: false });
     playerUpdate(null, { title: 'Show B', playing: false });
 
     expect(storeData.watchHistory).toHaveLength(2);

@@ -15,6 +15,16 @@ declare global {
       updateSettings: (updates: Partial<AppSettings>) => Promise<boolean>;
       chooseScreenshotDir: () => Promise<string | null>;
       validateSetting: (key: string, value: any) => Promise<ValidationResult>;
+      exportSettings: () => Promise<string | null>;
+      importSettings: () => Promise<boolean>;
+      checkSelectorHealth: () => Promise<any>;
+      exportSelectorHealth: () => Promise<string | null>;
+      getUpdateStatus: () => Promise<any>;
+      checkUpdatesNow: () => Promise<boolean>;
+      listUpdateReleases: (force?: boolean) => Promise<any[]>;
+      rollbackVersion: (tag: string) => Promise<string>;
+      restoreSessionNow: () => Promise<boolean>;
+      exitSafeMode: () => Promise<boolean>;
     };
 
     historyAPI?: {
@@ -38,8 +48,13 @@ declare global {
 
     queueAPI?: {
       getQueue: () => Promise<QueueItem[]>;
-      addToQueue: (item: QueueItem) => Promise<boolean>;
-      removeFromQueue: (index: number) => Promise<boolean>;
+      addToQueue: (item: QueueItem) => Promise<{ added: boolean; deduped: boolean }>;
+      removeFromQueue: (target: number | string) => Promise<boolean>;
+      clearQueue: () => Promise<boolean>;
+      reorderQueue: (from: number, to: number) => Promise<boolean>;
+      dedupeQueue: () => Promise<{ removed: number }>;
+      pinItem: (id: string, pinned: boolean) => Promise<boolean>;
+      playNext: (targetId?: string) => Promise<QueueItem | null>;
     };
   }
 }

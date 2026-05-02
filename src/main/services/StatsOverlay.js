@@ -148,6 +148,7 @@ class StatsOverlay {
   async update() {
     const win = this.ctx.getMainWindow();
     if (!win) return;
+    const includeNetwork = this.ctx.store.get('networkMetricsEnabled', true);
 
     const script = `
       (function() {
@@ -176,32 +177,51 @@ class StatsOverlay {
     try {
       const stats = await win.webContents.executeJavaScript(script, true);
       if (stats) {
-        this.render(stats);
+        let network = null;
+        if (includeNetwork) {
+          const playbackService = this.ctx.getService('playback');
+          if (playbackService) {
+            network = await playbackService.getNetworkMetrics();
+          }
+        }
+        this.render(stats, network);
       }
     } catch (error) {
       // ignore
     }
   }
 
-  render(stats) {
+  render(stats, network = null) {
     const win = this.ctx.getMainWindow();
     if (!win) return;
 
-    const html = `
-      Time: ${stats.currentTime}s / ${stats.duration}s
-      Buffered: ${stats.buffered}s
-      Speed: ${stats.playbackRate}x
-      Volume: ${stats.volume}%
-      Resolution: ${stats.resolution}
-      Frames: ${stats.fps}
-      Dropped: ${stats.dropped}
-    `.trim();
+    const lines = [
+      `Time: ${stats.currentTime}s / ${stats.duration}s`,
+      `Buffered: ${stats.buffered}s`,
+      `Speed: ${stats.playbackRate}x`,
+      `Volume: ${stats.volume}%`,
+      `Resolution: ${stats.resolution}`,
+      `Frames: ${stats.fps}`,
+      `Dropped: ${stats.dropped}`,
+    ];
+
+    if (network) {
+      const decoded = Number(network.decodedFrames || 0);
+      const dropped = Number(network.droppedFrames || 0);
+      const dropRate = decoded > 0 ? ((dropped / decoded) * 100).toFixed(2) : '0.00';
+      lines.push(`Connection: ${network.effectiveType || 'n/a'} (${network.downlink || '?'}Mbps)`);
+      lines.push(`RTT: ${network.rtt || '?'}ms`);
+      lines.push(`Drop rate: ${dropRate}%`);
+    }
+
+    const html = lines.join('\n');
+    const serialized = JSON.stringify(html);
 
     const script = `
       (function() {
         const content = document.getElementById('netflix-stats-content');
         if (content) {
-          content.textContent = \`${html}\`;
+          content.textContent = ${serialized};
         }
       })();
     `;

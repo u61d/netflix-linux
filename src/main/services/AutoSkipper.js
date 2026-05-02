@@ -4,14 +4,14 @@ class AutoSkipper {
   constructor(ctx) {
     this.ctx = ctx;
     this.interval = null;
-    this.selectorCache = null;
     this.lastValidation = 0;
+    this.lastValidationResult = null;
   }
 
   start() {
     if (this.interval) return;
 
-    this.validateSelectors();
+    this.validateSelectors(true);
 
     this.interval = setInterval(async () => {
       await this.tick();
@@ -79,42 +79,91 @@ class AutoSkipper {
     }
   }
 
-  async validateSelectors() {
+  getSelectorMap() {
+    return {
+      intro: SKIP_SELECTORS.intro,
+      recap: SKIP_SELECTORS.recap,
+      credits: SKIP_SELECTORS.credits,
+      nextEpisode: SKIP_SELECTORS.nextEpisode,
+      continueWatching: SKIP_SELECTORS.continueWatching,
+    };
+  }
+
+  async runSelectorHealthCheck() {
+    const win = this.ctx.getMainWindow();
+    if (!win) return null;
+
+    const selectorMap = this.getSelectorMap();
+    const script = `
+      (function() {
+        const selectorMap = ${JSON.stringify(selectorMap)};
+        const entries = Object.entries(selectorMap).map(([key, selector]) => {
+          const matchCount = document.querySelectorAll(selector).length;
+          return {
+            key,
+            selector,
+            exists: matchCount > 0,
+            matchCount
+          };
+        });
+        return entries;
+      })();
+    `;
+
+    try {
+      const selectors = await win.webContents.executeJavaScript(script, true);
+      const invalid = selectors.filter((entry) => !entry.exists);
+      const result = {
+        checkedAt: new Date().toISOString(),
+        total: selectors.length,
+        valid: selectors.length - invalid.length,
+        invalid: invalid.length,
+        selectors,
+      };
+      this.lastValidationResult = result;
+      return result;
+    } catch (error) {
+      this.ctx.logger.error('Selector health check failed:', error);
+      return {
+        checkedAt: new Date().toISOString(),
+        total: 0,
+        valid: 0,
+        invalid: 0,
+        selectors: [],
+        error: error.message,
+      };
+    }
+  }
+
+  async validateSelectors(force = false) {
     const now = Date.now();
 
-    if (this.lastValidation && now - this.lastValidation < 3600000) {
+    if (!force && this.lastValidation && now - this.lastValidation < 3600000) {
       return;
     }
 
     this.lastValidation = now;
 
-    const win = this.ctx.getMainWindow();
-    if (!win) return;
+    const result = await this.runSelectorHealthCheck();
+    if (!result) return;
 
-    const script = `
-      (function() {
-        const selectors = ${JSON.stringify(Object.values(SKIP_SELECTORS))};
-        const results = {};
-        for (const selector of selectors) {
-          results[selector] = document.querySelectorAll(selector).length > 0;
-        }
-        return results;
-      })();
-    `;
+    const invalidSelectors = result.selectors
+      .filter((entry) => !entry.exists)
+      .map((entry) => `${entry.key}: ${entry.selector}`);
 
-    try {
-      const results = await win.webContents.executeJavaScript(script, true);
-      const invalid = Object.entries(results)
-        .filter(([_, exists]) => !exists)
-        .map(([selector]) => selector);
-
-      if (invalid.length > 0) {
-        this.ctx.logger.warn('Some skip selectors may be outdated:', invalid);
-      } else {
-        this.ctx.logger.debug('All skip selectors validated successfully');
+    if (invalidSelectors.length > 0) {
+      this.ctx.logger.warn('Some skip selectors may be outdated:', invalidSelectors);
+      if (this.ctx.store.get('selectorHealthAlerts', true)) {
+        const NotificationService = require('../utils/notifications');
+        const notifier = new NotificationService(this.ctx);
+        notifier.notify({
+          title: 'Selector Warning',
+          body: `${invalidSelectors.length} selector(s) may be outdated`,
+          priority: 'high',
+        });
       }
-    } catch (error) {
-      this.ctx.logger.error('Selector validation failed:', error);
+    } else {
+      this.ctx.logger.debug('All skip selectors validated successfully');
     }
   }
 

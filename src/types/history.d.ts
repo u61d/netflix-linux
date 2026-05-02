@@ -28,9 +28,14 @@ export interface WatchStats {
 }
 
 export interface QueueItem {
+  id?: string;
   title: string;
   url?: string;
   addedAt: number;
+  lastPlayedAt?: number | null;
+  pinned?: boolean;
+  order?: number;
+  dedupedAt?: number;
 }
 
 export interface ExportOptions {

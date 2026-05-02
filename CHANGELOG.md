@@ -2,30 +2,52 @@
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-05-02
+
 ### Added
-- Auto-update checker (downloads in background, asks before installing)
+- Auto-update controls with stable/beta channels, release browsing, rollback links, and background downloads
+- Session restore prompt on startup plus a manual restore action in settings
+- Selector health diagnostics with JSON export
+- Advanced watch queue controls: hover-card add button, search, drag reorder, dedupe, pin, and play-next
+- Theme packs and compact mode for app windows
+- Crash-safe mode after repeated unclean exits
 - E2E smoke tests for critical flows
-- Better error handling for profile switching
 - Import/export for settings
-- Drag-to-reorder profiles
-- Community can now update Netflix selectors without waiting for releases
-- Auto-pause/resume on focus loss with Hyprland workspace awareness
-- Auto-skip recap toggle in settings and menu
-- Discord RPC shows Linux distro name/icon when available
+- Community health docs for contributors and pull requests
 
 ### Fixed
-- Profile switching doesn't lose your video position anymore
-- Infinite retry loops when opening settings/keybinds windows (caps at 20 now)
-- Missing error handling in player state tracking
-- Discord RPC uses exponential backoff instead of hammering the server
-- Watch history persists during playback and refreshes history window
+- Discord RPC now looks for Linux IPC sockets more reliably and backs off reconnects instead of hammering
+- Watch history ignores browse pages, tracks paused time correctly, and finalizes sessions on cleanup
 - Screenshot sound and capture are debounced to avoid duplicates
+- Settings side effects only re-apply when values actually changed
 
 ### Changed
-- Profile switching keeps main window open (was closing before)
-- Better error messages in renderer preloads
-- Stats overlay re-injects on navigation
-- Skip recap selector updated for newer Netflix markup
+- Settings window now exposes update, diagnostics, restore, appearance, and safety controls in one place
+- Renderer queue integration can add titles directly from Netflix hover cards
+- Child windows inherit the selected theme and compact mode after load
+- Main process startup now tracks crash state and can enter safe mode automatically
+- Stats overlay can include connection and drop-rate data alongside the existing playback stats
+
+## [2.0.1] - 2026-02-21
+
+Stability and polish update.
+
+### What Changed
+- Improved main process safety defaults
+- Added icon fallbacks to avoid missing resource issues
+- Fixed WindowManager test handle leak
+- Cleaned settings window messaging/wording
+- Updated docs for discoverability:
+  - README roadmap + "Help This Project Grow"
+  - Better contribution/discoverability notes
+- Added new release media:
+  - UI demo GIF
+  - Settings screenshot
+  - History screenshot
+
+### Notes
+- No intentional breaking changes
+- Linux packages included: AppImage, pacman, deb.
 
 ## [2.0.0] - 2025-07-12
 

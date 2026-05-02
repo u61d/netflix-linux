@@ -16,6 +16,7 @@ const DEFAULT_KEYBINDS = {
   showStats: 'Ctrl+Shift+S',
   showHistory: 'Ctrl+Shift+H',
   showQueue: 'Ctrl+Shift+Q',
+  addCurrentToQueue: 'Ctrl+Shift+A',
   openSettings: 'Ctrl+,',
   openKeybinds: 'Ctrl+K',
   openProfiles: 'Ctrl+P',
@@ -36,6 +37,8 @@ const DEFAULTS = {
   discordEnabled: true,
   discordClientId: '1437240728987369513',
   rpcRetryMs: 7000,
+  autoCheckUpdates: true,
+  updateChannel: 'stable',
 
   playbackSpeed: 1.0,
   autoSkipIntro: true,
@@ -43,18 +46,24 @@ const DEFAULTS = {
   autoSkipCredits: false,
   autoNextEpisode: false,
   autoPauseOnBlur: false,
+  sessionRestoreEnabled: true,
 
   borderless: env.isTilingWM(),
   alwaysOnTop: false,
   startMinimized: false,
   theme: 'dark',
+  uiTheme: 'netflix-red',
+  compactMode: false,
 
   watchHistory: [],
   watchQueue: [],
+  lastSessionState: null,
 
   notificationsEnabled: true,
   quietMode: false,
   showDetailedStats: false,
+  networkMetricsEnabled: true,
+  selectorHealthAlerts: true,
   sentryEnabled: false,
 
   screenshotsDir: path.join(picturesPath, 'Netflix Screenshots'),
@@ -79,6 +88,10 @@ const DEFAULTS = {
   customKeybinds: {},
   hardwareAcceleration: true,
   debugMode: false,
+  crashSafeMode: true,
+  safeModeActive: false,
+  crashCount: 0,
+  lastRunExitedCleanly: true,
 
   windowStates: {},
 };

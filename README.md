@@ -3,7 +3,7 @@
 Unofficial Netflix desktop client for Linux with DRM support, Discord Rich Presence, and playback features.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.0.0-green.svg)
+![Version](https://img.shields.io/badge/version-2.1.0-green.svg)
 ![GitHub stars](https://img.shields.io/github/stars/u61d/netflix-linux?style=flat)
 ![GitHub issues](https://img.shields.io/github/issues/u61d/netflix-linux?style=flat)
 ![GitHub downloads](https://img.shields.io/github/downloads/u61d/netflix-linux/total?style=flat)
@@ -13,19 +13,25 @@ Unofficial Netflix desktop client for Linux with DRM support, Discord Rich Prese
 Netflix doesn't have a proper Linux desktop app. This fixes that.
 
 **Features:**
+
 - Full DRM support via Widevine
 - Discord Rich Presence
 - Multi-profile support (different accounts, separate sessions)
 - Watch history with CSV/JSON/TXT export
 - Auto-skip intros, recaps, credits
+- Selector health diagnostics + export
 - Screenshot capture (F12)
 - Picture-in-Picture mode
 - Speed controls (0.25x to 4x)
+- Session restore on startup
 - Auto-pause on focus loss (workspace-aware on Hyprland)
 - Health reminders
-- Stats overlay with real-time metrics
+- Stats overlay with network/quality metrics
 - Customizable keyboard shortcuts
-- Watch queue (experimental)
+- Advanced watch queue (hover-card add button, search, drag reorder, dedupe, pin, play-next)
+- Update channels (stable/beta) + rollback helper
+- Crash-safe mode
+- Theme packs + compact mode
 - Wayland and tiling WM support (tested on Hyprland, i3, bspwm)
 
 ## Screenshots
@@ -35,6 +41,7 @@ Netflix doesn't have a proper Linux desktop app. This fixes that.
 ![Watch History Window](assets/screenshots/history-window.png)
 
 **Privacy:**
+
 - No tracking by default
 - Crash reporting is opt-in only (uses Sentry)
 - Everything runs locally
@@ -56,17 +63,20 @@ Netflix doesn't have a proper Linux desktop app. This fixes that.
 Download from [Releases](https://github.com/u61d/netflix-linux/releases):
 
 **AppImage** (universal):
+
 ```bash
 chmod +x Netflix-*.AppImage
 ./Netflix-*.AppImage
 ```
 
 **Arch/Manjaro**:
+
 ```bash
 sudo pacman -U netflix-linux-*.pacman
 ```
 
 **Debian/Ubuntu**:
+
 ```bash
 sudo dpkg -i netflix-linux-*.deb
 ```
@@ -81,6 +91,7 @@ npm start
 ```
 
 Build packages:
+
 ```bash
 npm run build              # all formats
 npm run build:appimage     # AppImage only
@@ -92,19 +103,20 @@ npm run build:deb          # Debian package
 
 ### Keyboard Shortcuts
 
-| Keys | Action |
-|------|--------|
-| `Ctrl+,` | Settings |
-| `Ctrl+Shift+S` | Show stats |
-| `Ctrl+Shift+H` | Watch history |
-| `Ctrl+Shift+Q` | Watch queue |
-| `Ctrl+K` | Customize shortcuts |
-| `Ctrl+P` | Switch profiles |
-| `F12` | Screenshot |
-| `F9` | Picture-in-Picture |
-| `F6/F7/F8` | Speed controls |
-| `Ctrl+Shift+T` | Always on top |
-| `Ctrl+Q` | Quit |
+| Keys           | Action                     |
+| -------------- | -------------------------- |
+| `Ctrl+,`       | Settings                   |
+| `Ctrl+Shift+S` | Show stats                 |
+| `Ctrl+Shift+H` | Watch history              |
+| `Ctrl+Shift+Q` | Watch queue                |
+| `Ctrl+Shift+A` | Add current title to queue |
+| `Ctrl+K`       | Customize shortcuts        |
+| `Ctrl+P`       | Switch profiles            |
+| `F12`          | Screenshot                 |
+| `F9`           | Picture-in-Picture         |
+| `F6/F7/F8`     | Speed controls             |
+| `Ctrl+Shift+T` | Always on top              |
+| `Ctrl+Q`       | Quit                       |
 
 All shortcuts are customizable.
 
@@ -113,11 +125,13 @@ All shortcuts are customizable.
 Shows what you're watching on Discord. Requires Discord desktop client.
 
 To use your own Discord app:
+
 1. Create app at [discord.com/developers](https://discord.com/developers/applications)
 2. Copy Client ID
 3. Settings → Discord → Paste Client ID
 
 Or set via environment variable:
+
 ```bash
 export DISCORD_CLIENT_ID=your_client_id
 ```
@@ -131,6 +145,7 @@ Use profiles for different Netflix accounts or separate watch histories. Each pr
 Press F12 to capture. Saves to `~/Pictures/Netflix Screenshots/` by default.
 
 Sound effect requires one of:
+
 - `paplay` (PulseAudio)
 - `pw-play` (PipeWire)
 - `canberra-gtk-play`
@@ -204,26 +219,29 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 ## Known Issues
 
 ### Wayland
+
 Some window management features need extra flags. The app auto-detects Wayland and adjusts.
 
 ### Tiling WMs
+
 Enable "Borderless window" in settings for better tiling behavior.
 
 ### Screenshot sound not working
+
 Install one of: `paplay`, `pw-play`, or `canberra-gtk-play`
 
 ### Discord RPC not connecting
+
 Discord desktop client must be running. Browser version doesn't support RPC.
 
-### Watch queue
-Queue is experimental and may not populate on some Netflix layouts. Use `Ctrl+Shift+Q` to open it.
-
 ### Video won't play
+
 The app uses Castlabs Electron with Widevine DRM. Check logs in `~/.config/netflix-linux/logs/` if playback fails.
 
 ## Contributing
 
 PRs welcome. Please:
+
 - Follow existing code style
 - Add tests for new features
 - Run `npm run lint` before committing

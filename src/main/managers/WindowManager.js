@@ -207,6 +207,7 @@ class WindowManager {
     });
 
     win.loadFile(path.join(__dirname, '../../renderer/windows', options.htmlFile));
+    win.webContents.on('did-finish-load', () => this.applyWindowAppearance(win));
 
     if (options.resizable !== false) {
       this.trackWindowState(win, name);
@@ -300,6 +301,31 @@ class WindowManager {
         partition: 'persist:default',
       },
     };
+  }
+
+  applyWindowAppearance(win) {
+    if (!win || win.isDestroyed()) return;
+    try {
+      const url = win.webContents.getURL() || '';
+      if (!url.startsWith('file://')) return;
+      const uiTheme = this.ctx.store.get('uiTheme', 'netflix-red');
+      const compactMode = this.ctx.store.get('compactMode', false);
+      const script = `
+        (function() {
+          document.documentElement.setAttribute('data-theme', ${JSON.stringify(uiTheme)});
+          if (document.body) {
+            document.body.classList.toggle('compact-mode', ${Boolean(compactMode)});
+          }
+        })();
+      `;
+      win.webContents.executeJavaScript(script, true).catch(() => {});
+    } catch (error) {
+      this.ctx.logger.debug('applyWindowAppearance failed:', error.message);
+    }
+  }
+
+  applyAppearanceToAllWindows() {
+    this.windows.forEach((win) => this.applyWindowAppearance(win));
   }
 
   cleanup() {
