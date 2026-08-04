@@ -16,6 +16,8 @@ try {
     rollbackVersion: (tag) => ipcRenderer.invoke('rollback-version', tag),
     restoreSessionNow: () => ipcRenderer.invoke('restore-session-now'),
     exitSafeMode: () => ipcRenderer.invoke('exit-safe-mode'),
+    reapplySubtitleStyle: () => ipcRenderer.invoke('reapply-subtitle-style'),
+    checkSubtitleSelectors: () => ipcRenderer.invoke('check-subtitle-selectors'),
   });
 } catch (error) {
   console.error('[Settings Preload] Failed to expose API:', error);

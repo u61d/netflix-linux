@@ -12,6 +12,7 @@ const HealthReminder = require('./services/HealthReminder');
 const ScreenshotService = require('./services/ScreenshotService');
 const PlaybackService = require('./services/PlaybackService');
 const WatchHistoryService = require('./services/WatchHistoryService');
+const SubtitleStyleService = require('./services/SubtitleStyleService');
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
@@ -156,6 +157,7 @@ async function initializeApp() {
   const playbackService = new PlaybackService(ctx);
   const historyService = new WatchHistoryService(ctx);
   const updateService = new UpdateService(ctx);
+  const subtitleStyleService = new SubtitleStyleService(ctx);
 
   ctx.registerService('autoSkipper', autoSkipper);
   ctx.registerService('statsOverlay', statsOverlay);
@@ -164,10 +166,15 @@ async function initializeApp() {
   ctx.registerService('playback', playbackService);
   ctx.registerService('history', historyService);
   ctx.registerService('update', updateService);
+  ctx.registerService('subtitleStyle', subtitleStyleService);
 
   const mainWindow = windowManager.createMainWindow();
   ctx.setMainWindow(mainWindow);
   promptSessionRestore(mainWindow, playbackService, runtimeSafety.safeModeActive);
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    subtitleStyleService.apply();
+  });
 
   setupIpcHandlers(ctx);
   updateService.scheduleStartupCheck();

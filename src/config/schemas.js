@@ -95,6 +95,41 @@ const VALIDATION_SCHEMAS = {
   crashSafeMode: {
     type: 'boolean',
   },
+  subtitleCustomizationEnabled: {
+    type: 'boolean',
+  },
+  subtitleFontSize: {
+    type: 'string',
+    enum: ['small', 'medium', 'large', 'xlarge'],
+  },
+  subtitleFontFamily: {
+    type: 'string',
+    enum: ['default', 'sans', 'serif', 'monospace'],
+  },
+  subtitleTextColor: {
+    type: 'string',
+    pattern: /^#[0-9a-fA-F]{6}$/,
+    patternError: 'Expected a hex color like #ffffff',
+  },
+  subtitleBackgroundColor: {
+    type: 'string',
+    pattern: /^#[0-9a-fA-F]{6}$/,
+    patternError: 'Expected a hex color like #000000',
+  },
+  subtitleBackgroundOpacity: {
+    type: 'number',
+    min: 0,
+    max: 100,
+  },
+  subtitleEdgeStyle: {
+    type: 'string',
+    enum: ['none', 'dropshadow', 'outline', 'raised'],
+  },
+  subtitleVerticalOffset: {
+    type: 'number',
+    min: -150,
+    max: 150,
+  },
 };
 
 module.exports = { VALIDATION_SCHEMAS };

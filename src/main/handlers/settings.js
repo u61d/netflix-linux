@@ -39,6 +39,15 @@ module.exports = function setupSettingsHandlers(ctx) {
         crashSafeMode: ctx.store.get('crashSafeMode', true),
         safeModeActive: ctx.store.get('safeModeActive', false),
         crashCount: ctx.store.get('crashCount', 0),
+
+        subtitleCustomizationEnabled: ctx.store.get('subtitleCustomizationEnabled', false),
+        subtitleFontSize: ctx.store.get('subtitleFontSize', 'medium'),
+        subtitleFontFamily: ctx.store.get('subtitleFontFamily', 'default'),
+        subtitleTextColor: ctx.store.get('subtitleTextColor', '#ffffff'),
+        subtitleBackgroundColor: ctx.store.get('subtitleBackgroundColor', '#000000'),
+        subtitleBackgroundOpacity: ctx.store.get('subtitleBackgroundOpacity', 75),
+        subtitleEdgeStyle: ctx.store.get('subtitleEdgeStyle', 'dropshadow'),
+        subtitleVerticalOffset: ctx.store.get('subtitleVerticalOffset', 0),
       };
     } catch (error) {
       ctx.logger.error('get-settings error:', error);
@@ -139,6 +148,21 @@ module.exports = function setupSettingsHandlers(ctx) {
         updateService?.applyChannelSettings();
       }
 
+      const subtitleKeys = [
+        'subtitleCustomizationEnabled',
+        'subtitleFontSize',
+        'subtitleFontFamily',
+        'subtitleTextColor',
+        'subtitleBackgroundColor',
+        'subtitleBackgroundOpacity',
+        'subtitleEdgeStyle',
+        'subtitleVerticalOffset',
+      ];
+      if (subtitleKeys.some((key) => hasChanged(key))) {
+        const subtitleStyle = ctx.getService('subtitleStyle');
+        await subtitleStyle?.apply();
+      }
+
       const changedKeys = Object.keys(updates).filter((key) => hasChanged(key));
       ctx.logger.info(`Settings updated: ${changedKeys.join(', ') || 'no changes'}`);
       return true;
@@ -212,6 +236,14 @@ module.exports = function setupSettingsHandlers(ctx) {
           screenshotNotification: ctx.store.get('screenshotNotification'),
           crashSafeMode: ctx.store.get('crashSafeMode'),
           customKeybinds: ctx.store.get('customKeybinds'),
+          subtitleCustomizationEnabled: ctx.store.get('subtitleCustomizationEnabled'),
+          subtitleFontSize: ctx.store.get('subtitleFontSize'),
+          subtitleFontFamily: ctx.store.get('subtitleFontFamily'),
+          subtitleTextColor: ctx.store.get('subtitleTextColor'),
+          subtitleBackgroundColor: ctx.store.get('subtitleBackgroundColor'),
+          subtitleBackgroundOpacity: ctx.store.get('subtitleBackgroundOpacity'),
+          subtitleEdgeStyle: ctx.store.get('subtitleEdgeStyle'),
+          subtitleVerticalOffset: ctx.store.get('subtitleVerticalOffset'),
         },
       };
 
@@ -340,6 +372,18 @@ module.exports = function setupSettingsHandlers(ctx) {
     const playbackService = ctx.getService('playback');
     if (!playbackService) throw new Error('Playback service unavailable');
     return await playbackService.restorePreviousSession();
+  });
+
+  registerHandle(ctx, ipcMain, 'reapply-subtitle-style', async () => {
+    const subtitleStyle = ctx.getService('subtitleStyle');
+    if (!subtitleStyle) throw new Error('Subtitle style service unavailable');
+    return await subtitleStyle.apply();
+  });
+
+  registerHandle(ctx, ipcMain, 'check-subtitle-selectors', async () => {
+    const subtitleStyle = ctx.getService('subtitleStyle');
+    if (!subtitleStyle) throw new Error('Subtitle style service unavailable');
+    return await subtitleStyle.checkSelectorHealth();
   });
 
   registerHandle(ctx, ipcMain, 'exit-safe-mode', async () => {

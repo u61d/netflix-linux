@@ -15,6 +15,10 @@ function loadSelectors() {
   } catch (error) {
     console.error('Failed to load selectors:', error);
     return {
+      subtitle: {
+        container: '.player-timedtext',
+        textContainer: '.player-timedtext-text-container',
+      },
       skip: {
         intro: '[data-uia="player-skip-intro"], button[aria-label="Skip Intro"]',
         recap: 'button[aria-label="Skip Recap"]',
@@ -42,11 +46,13 @@ const selectors = loadSelectors();
 const SKIP_SELECTORS = selectors.skip;
 const TITLE_SELECTORS = selectors.title;
 const META_SELECTORS = selectors.meta;
+const SUBTITLE_SELECTORS = selectors.subtitle;
 
 module.exports = {
   SKIP_SELECTORS,
   TITLE_SELECTORS,
   META_SELECTORS,
+  SUBTITLE_SELECTORS,
   reloadSelectors: () => {
     cachedSelectors = null;
     return loadSelectors();

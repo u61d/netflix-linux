@@ -250,6 +250,101 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Subtitles</div>
+      <div class="setting">
+        <input type="checkbox" id="subtitleCustomizationEnabled" />
+        <label for="subtitleCustomizationEnabled">Override Netflix's subtitle style</label>
+      </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label for="subtitleFontSize" style="width: 120px">Size</label>
+        <select id="subtitleFontSize">
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+          <option value="xlarge">Extra large</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label for="subtitleFontFamily" style="width: 120px">Font</label>
+        <select id="subtitleFontFamily">
+          <option value="default">Netflix default</option>
+          <option value="sans">Sans-serif</option>
+          <option value="serif">Serif</option>
+          <option value="monospace">Monospace</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label for="subtitleEdgeStyle" style="width: 120px">Edge style</label>
+        <select id="subtitleEdgeStyle">
+          <option value="none">None</option>
+          <option value="dropshadow">Drop shadow</option>
+          <option value="raised">Raised</option>
+          <option value="outline">Outline</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label for="subtitleTextColor" style="width: 120px">Text color</label>
+        <input type="color" id="subtitleTextColor" style="width: 48px; padding: 0" />
+      </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label for="subtitleBackgroundColor" style="width: 120px">Background</label>
+        <input type="color" id="subtitleBackgroundColor" style="width: 48px; padding: 0" />
+        <input
+          type="range"
+          id="subtitleBackgroundOpacity"
+          min="0"
+          max="100"
+          step="5"
+          style="flex: 1"
+        />
+        <span id="subtitleBackgroundOpacityValue" style="width: 40px; text-align: right">75%</span>
+      </div>
+      <div class="row" style="margin-bottom: 8px">
+        <label for="subtitleVerticalOffset" style="width: 120px">Vertical position</label>
+        <input
+          type="range"
+          id="subtitleVerticalOffset"
+          min="-150"
+          max="150"
+          step="5"
+          style="flex: 1"
+        />
+        <span id="subtitleVerticalOffsetValue" style="width: 40px; text-align: right">0px</span>
+      </div>
+      <div class="hint">Preview (approximate — actual look depends on the video itself):</div>
+      <div
+        id="subtitlePreviewStage"
+        style="
+          position: relative;
+          height: 90px;
+          background: #000
+            url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 fill=%22%23111%22/%3E%3C/svg%3E');
+          border-radius: 6px;
+          overflow: hidden;
+          margin-bottom: 8px;
+        "
+      >
+        <div
+          id="subtitlePreviewText"
+          style="position: absolute; left: 0; right: 0; text-align: center"
+        >
+          <span id="subtitlePreviewInner" style="display: inline-block"
+            >Like this? This is a preview line.</span
+          >
+        </div>
+      </div>
+      <div class="row">
+        <button id="reapplySubtitleBtn" class="secondary" type="button">
+          Re-apply to open window
+        </button>
+        <button id="checkSubtitleSelectorsBtn" class="secondary" type="button">
+          Check subtitle detection
+        </button>
+      </div>
+      <div id="subtitleSelectorOutput" class="output" style="display: none"></div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Appearance & Window</div>
       <div class="row" style="margin-bottom: 8px">
         <label for="uiTheme" style="width: 120px">Theme pack</label>
@@ -439,6 +534,16 @@
         setChecked('autoPauseOnBlur', s.autoPauseOnBlur);
         setValue('playbackSpeed', String(s.playbackSpeed ?? '1'));
 
+        setChecked('subtitleCustomizationEnabled', s.subtitleCustomizationEnabled);
+        setValue('subtitleFontSize', s.subtitleFontSize, 'medium');
+        setValue('subtitleFontFamily', s.subtitleFontFamily, 'default');
+        setValue('subtitleTextColor', s.subtitleTextColor, '#ffffff');
+        setValue('subtitleBackgroundColor', s.subtitleBackgroundColor, '#000000');
+        setValue('subtitleBackgroundOpacity', s.subtitleBackgroundOpacity, 75);
+        setValue('subtitleEdgeStyle', s.subtitleEdgeStyle, 'dropshadow');
+        setValue('subtitleVerticalOffset', s.subtitleVerticalOffset, 0);
+        updateSubtitlePreview();
+
         setValue('uiTheme', s.uiTheme, 'netflix-red');
         setChecked('compactMode', s.compactMode);
 
@@ -491,6 +596,15 @@
 
             autoPauseOnBlur: $('autoPauseOnBlur').checked,
             playbackSpeed: Number.parseFloat($('playbackSpeed').value),
+
+            subtitleCustomizationEnabled: $('subtitleCustomizationEnabled').checked,
+            subtitleFontSize: $('subtitleFontSize').value,
+            subtitleFontFamily: $('subtitleFontFamily').value,
+            subtitleTextColor: $('subtitleTextColor').value,
+            subtitleBackgroundColor: $('subtitleBackgroundColor').value,
+            subtitleBackgroundOpacity: Number.parseInt($('subtitleBackgroundOpacity').value, 10),
+            subtitleEdgeStyle: $('subtitleEdgeStyle').value,
+            subtitleVerticalOffset: Number.parseInt($('subtitleVerticalOffset').value, 10),
 
             uiTheme: $('uiTheme').value,
             compactMode: $('compactMode').checked,
@@ -582,6 +696,92 @@
         }
       }
 
+      const EDGE_SHADOW_CSS = {
+        none: 'none',
+        dropshadow: '1px 1px 3px rgba(0,0,0,0.9)',
+        raised: '1px 1px 2px rgba(0,0,0,0.9), 2px 2px 4px rgba(0,0,0,0.9)',
+        outline:
+          '-1px -1px 0 rgba(0,0,0,0.9), 1px -1px 0 rgba(0,0,0,0.9), -1px 1px 0 rgba(0,0,0,0.9), 1px 1px 0 rgba(0,0,0,0.9)',
+      };
+
+      function hexToRgba(hex, alphaPercent) {
+        const match = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+        if (!match) return `rgba(0,0,0,${alphaPercent / 100})`;
+        const int = parseInt(match[1], 16);
+        const r = (int >> 16) & 255;
+        const g = (int >> 8) & 255;
+        const b = int & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alphaPercent / 100})`;
+      }
+
+      const SUBTITLE_FONT_PX = { small: 14, medium: 18, large: 22, xlarge: 27 };
+      const SUBTITLE_FONT_STACK = {
+        default: 'inherit',
+        sans: '"Helvetica Neue", Arial, sans-serif',
+        serif: 'Georgia, "Times New Roman", serif',
+        monospace: '"Courier New", Consolas, monospace',
+      };
+
+      function updateSubtitlePreview() {
+        const opacity = Number($('subtitleBackgroundOpacity').value) || 0;
+        const offset = Number($('subtitleVerticalOffset').value) || 0;
+        $('subtitleBackgroundOpacityValue').textContent = `${opacity}%`;
+        $('subtitleVerticalOffsetValue').textContent = `${offset}px`;
+
+        const enabled = $('subtitleCustomizationEnabled').checked;
+        const stage = $('subtitlePreviewStage');
+        const text = $('subtitlePreviewText');
+        const inner = $('subtitlePreviewInner');
+
+        stage.style.opacity = enabled ? '1' : '0.4';
+        text.style.bottom = `${10 + offset / 3}px`;
+        inner.style.fontSize = `${SUBTITLE_FONT_PX[$('subtitleFontSize').value] || 18}px`;
+        inner.style.color = $('subtitleTextColor').value;
+        inner.style.fontFamily = SUBTITLE_FONT_STACK[$('subtitleFontFamily').value] || 'inherit';
+        inner.style.textShadow = EDGE_STYLE_OR_NONE();
+        inner.style.backgroundColor = hexToRgba($('subtitleBackgroundColor').value, opacity);
+        inner.style.padding = '2px 8px';
+        inner.style.borderRadius = '3px';
+
+        function EDGE_STYLE_OR_NONE() {
+          return EDGE_SHADOW_CSS[$('subtitleEdgeStyle').value] || 'none';
+        }
+      }
+
+      async function reapplySubtitleStyle() {
+        try {
+          await window.settingsAPI.reapplySubtitleStyle();
+          showStatus('Subtitle style re-applied to the main window.', 'success');
+        } catch (error) {
+          showStatus(`Could not re-apply subtitle style: ${error.message}`, 'error');
+        }
+      }
+
+      async function checkSubtitleSelectors() {
+        const output = $('subtitleSelectorOutput');
+        output.style.display = 'block';
+        output.textContent = 'Checking...';
+        try {
+          const result = await window.settingsAPI.checkSubtitleSelectors();
+          if (!result) {
+            output.textContent = 'No main window available to check.';
+            return;
+          }
+          if (result.error) {
+            output.textContent = `Error: ${result.error}`;
+            return;
+          }
+          output.textContent = [
+            `Container elements found: ${result.containerFound}`,
+            `Subtitle text elements found: ${result.textContainerFound}`,
+            '',
+            result.note,
+          ].join('\n');
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      }
+
       async function restoreSessionNow() {
         try {
           const restored = await window.settingsAPI.restoreSessionNow();
@@ -652,6 +852,24 @@
 
         $('restoreSessionNowBtn').addEventListener('click', restoreSessionNow);
         $('exitSafeModeBtn').addEventListener('click', clearSafeModeState);
+
+        $('reapplySubtitleBtn').addEventListener('click', reapplySubtitleStyle);
+        $('checkSubtitleSelectorsBtn').addEventListener('click', checkSubtitleSelectors);
+
+        const subtitleInputs = [
+          'subtitleCustomizationEnabled',
+          'subtitleFontSize',
+          'subtitleFontFamily',
+          'subtitleTextColor',
+          'subtitleBackgroundColor',
+          'subtitleBackgroundOpacity',
+          'subtitleEdgeStyle',
+          'subtitleVerticalOffset',
+        ];
+        subtitleInputs.forEach((id) => {
+          $(id).addEventListener('input', updateSubtitlePreview);
+          $(id).addEventListener('change', updateSubtitlePreview);
+        });
       }
 
       function init() {

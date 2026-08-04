@@ -55,6 +55,15 @@ const DEFAULTS = {
   uiTheme: 'netflix-red',
   compactMode: false,
 
+  subtitleCustomizationEnabled: false,
+  subtitleFontSize: 'medium',
+  subtitleFontFamily: 'default',
+  subtitleTextColor: '#ffffff',
+  subtitleBackgroundColor: '#000000',
+  subtitleBackgroundOpacity: 75,
+  subtitleEdgeStyle: 'dropshadow',
+  subtitleVerticalOffset: 0,
+
   watchHistory: [],
   watchQueue: [],
   lastSessionState: null,

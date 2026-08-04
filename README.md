@@ -19,6 +19,7 @@ Netflix doesn't have a proper Linux desktop app. This fixes that.
 - Multi-profile support (different accounts, separate sessions)
 - Watch history with CSV/JSON/TXT export
 - Auto-skip intros, recaps, credits
+- Subtitle customization (size, font, color, background, edge style, position)
 - Selector health diagnostics + export
 - Screenshot capture (F12)
 - Picture-in-Picture mode
