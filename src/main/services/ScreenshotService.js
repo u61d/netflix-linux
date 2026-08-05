@@ -100,13 +100,33 @@ class ScreenshotService {
       const image = await win.webContents.capturePage();
       const dir = this.ensureDirectory();
 
+      const format = this.ctx.store.get('screenshotFormat', 'png');
+      const quality = this.ctx.store.get('screenshotQuality', 100);
+      let ext;
+      let buffer;
+
+      if (format === 'jpg') {
+        ext = 'jpg';
+        buffer = image.toJPEG(Math.max(1, Math.min(100, quality)));
+      } else {
+        if (format === 'webp') {
+          // electron's nativeImage has no built-in webp encoder; fall back to png
+          // rather than silently mislabeling a different format
+          this.ctx.logger.warn(
+            'screenshotFormat is "webp" but that is not supported yet; using png'
+          );
+        }
+        ext = 'png';
+        buffer = image.toPNG();
+      }
+
       const title = await win.webContents.getTitle();
       const cleanTitle = this.sanitizeFilename(title);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `${cleanTitle}_${timestamp}.png`;
+      const filename = `${cleanTitle}_${timestamp}.${ext}`;
       const filepath = path.join(dir, filename);
 
-      fs.writeFileSync(filepath, image.toPNG());
+      fs.writeFileSync(filepath, buffer);
 
       this.playSound();
 
