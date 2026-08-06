@@ -130,6 +130,9 @@ const VALIDATION_SCHEMAS = {
     min: -150,
     max: 150,
   },
+  watchPartyDisplayName: {
+    type: 'string',
+  },
 };
 
 module.exports = { VALIDATION_SCHEMAS };

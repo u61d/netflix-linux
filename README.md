@@ -30,6 +30,7 @@ Netflix doesn't have a proper Linux desktop app. This fixes that.
 - Stats overlay with network/quality metrics
 - Customizable keyboard shortcuts
 - Advanced watch queue (hover-card add button, search, drag reorder, dedupe, pin, play-next)
+- Watch Party (P2P sync + chat with friends via PeerJS, host/join by room code)
 - Update channels (stable/beta) + rollback helper
 - Crash-safe mode
 - Theme packs + compact mode

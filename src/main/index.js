@@ -13,6 +13,7 @@ const ScreenshotService = require('./services/ScreenshotService');
 const PlaybackService = require('./services/PlaybackService');
 const WatchHistoryService = require('./services/WatchHistoryService');
 const SubtitleStyleService = require('./services/SubtitleStyleService');
+const WatchPartyService = require('./services/WatchPartyService');
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
@@ -158,6 +159,7 @@ async function initializeApp() {
   const historyService = new WatchHistoryService(ctx);
   const updateService = new UpdateService(ctx);
   const subtitleStyleService = new SubtitleStyleService(ctx);
+  const watchPartyService = new WatchPartyService(ctx);
 
   ctx.registerService('autoSkipper', autoSkipper);
   ctx.registerService('statsOverlay', statsOverlay);
@@ -167,6 +169,7 @@ async function initializeApp() {
   ctx.registerService('history', historyService);
   ctx.registerService('update', updateService);
   ctx.registerService('subtitleStyle', subtitleStyleService);
+  ctx.registerService('watchParty', watchPartyService);
 
   const mainWindow = windowManager.createMainWindow();
   ctx.setMainWindow(mainWindow);

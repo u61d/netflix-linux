@@ -172,6 +172,31 @@ class WindowManager {
     });
   }
 
+  createWatchPartyWindow() {
+    const win = this.createChildWindow('watchparty', {
+      width: 380,
+      height: 560,
+      resizable: true,
+      minWidth: 320,
+      minHeight: 420,
+      title: 'Watch Party',
+      htmlFile: 'watchparty/index.html',
+      preload: 'watchparty/preload.js',
+    });
+
+    win.on('closed', () => {
+      const watchParty = this.ctx.getService('watchParty');
+      watchParty?.stop();
+    });
+
+    return win;
+  }
+
+  getWindow(name) {
+    const win = this.windows.get(name);
+    return win && !win.isDestroyed() ? win : null;
+  }
+
   createChildWindow(name, options) {
     if (this.windows.has(name)) {
       const existing = this.windows.get(name);

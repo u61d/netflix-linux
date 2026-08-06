@@ -4,6 +4,7 @@ const profilesHandlers = require('./profiles');
 const keybindsHandlers = require('./keybinds');
 const queueHandlers = require('./queue');
 const playbackHandlers = require('./playback');
+const watchPartyHandlers = require('./watchparty');
 
 function setupIpcHandlers(ctx) {
   settingsHandlers(ctx);
@@ -12,6 +13,7 @@ function setupIpcHandlers(ctx) {
   keybindsHandlers(ctx);
   queueHandlers(ctx);
   playbackHandlers(ctx);
+  watchPartyHandlers(ctx);
 
   ctx.logger.info('All IPC handlers registered');
 }

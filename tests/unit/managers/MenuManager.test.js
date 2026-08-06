@@ -72,6 +72,7 @@ describe('MenuManager', () => {
       createHistoryWindow: jest.fn(),
       createQueueWindow: jest.fn(),
       createProfilesWindow: jest.fn(),
+      createWatchPartyWindow: jest.fn(),
     };
     playbackService = {
       togglePictureInPicture: jest.fn(),
@@ -157,6 +158,9 @@ describe('MenuManager', () => {
 
       findItem(controls, 'Open Queue').click();
       expect(windowManager.createQueueWindow).toHaveBeenCalled();
+
+      findItem(controls, 'Watch Party...').click();
+      expect(windowManager.createWatchPartyWindow).toHaveBeenCalled();
     });
 
     it('opens the screenshots folder via shell.openPath', () => {

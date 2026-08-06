@@ -20,13 +20,16 @@ describe('ScreenshotService', () => {
   let service;
   let mockWindow;
   let mockImage;
+  let storeOverrides;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    storeOverrides = {};
 
     mockImage = {
       toPNG: jest.fn().mockReturnValue(Buffer.from('fake-png-data')),
+      toJPEG: jest.fn().mockReturnValue(Buffer.from('fake-jpeg-data')),
     };
 
     mockWindow = {
@@ -38,11 +41,13 @@ describe('ScreenshotService', () => {
 
     ctx = {
       store: {
-        get: jest.fn((key) => {
+        get: jest.fn((key, fallback) => {
           if (key === 'screenshotsDir') return '/home/user/Screenshots';
           if (key === 'screenshotSound') return false;
           if (key === 'screenshotNotification') return true;
-          return null;
+          if (key === 'screenshotFormat') return storeOverrides.screenshotFormat ?? 'png';
+          if (key === 'screenshotQuality') return storeOverrides.screenshotQuality ?? 100;
+          return fallback ?? null;
         }),
       },
       logger: {
@@ -112,6 +117,44 @@ describe('ScreenshotService', () => {
 
       const writeCall = fs.writeFileSync.mock.calls[0][0];
       expect(writeCall).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/);
+    });
+
+    it('defaults to png when no format is configured', async () => {
+      await service.capture();
+
+      expect(mockImage.toPNG).toHaveBeenCalled();
+      expect(mockImage.toJPEG).not.toHaveBeenCalled();
+      expect(fs.writeFileSync.mock.calls[0][0]).toMatch(/\.png$/);
+    });
+
+    it('uses toJPEG with the configured quality when format is jpg', async () => {
+      storeOverrides.screenshotFormat = 'jpg';
+      storeOverrides.screenshotQuality = 60;
+
+      await service.capture();
+
+      expect(mockImage.toJPEG).toHaveBeenCalledWith(60);
+      expect(mockImage.toPNG).not.toHaveBeenCalled();
+      expect(fs.writeFileSync.mock.calls[0][0]).toMatch(/\.jpg$/);
+    });
+
+    it('clamps out-of-range jpeg quality before passing it to toJPEG', async () => {
+      storeOverrides.screenshotFormat = 'jpg';
+      storeOverrides.screenshotQuality = 500;
+
+      await service.capture();
+
+      expect(mockImage.toJPEG).toHaveBeenCalledWith(100);
+    });
+
+    it('falls back to png and logs a warning when format is webp', async () => {
+      storeOverrides.screenshotFormat = 'webp';
+
+      await service.capture();
+
+      expect(mockImage.toPNG).toHaveBeenCalled();
+      expect(fs.writeFileSync.mock.calls[0][0]).toMatch(/\.png$/);
+      expect(ctx.logger.warn).toHaveBeenCalledWith(expect.stringContaining('webp'));
     });
 
     it('should show notification when enabled', async () => {
@@ -192,10 +235,7 @@ describe('ScreenshotService', () => {
 
       service.playSound();
 
-      expect(execSync).toHaveBeenCalledWith(
-        expect.stringContaining('paplay'),
-        expect.any(Object)
-      );
+      expect(execSync).toHaveBeenCalledWith(expect.stringContaining('paplay'), expect.any(Object));
       expect(service.soundMethod).toBe('paplay');
     });
 
@@ -227,7 +267,7 @@ describe('ScreenshotService', () => {
       service.playSound();
       execSync.mockClear();
       service.playSound();
-      
+
       expect(execSync).toHaveBeenCalledTimes(1);
       dateNowSpy.mockRestore();
     });

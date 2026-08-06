@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://0.peerjs.com https://0.peerjs.com"
+    />
+    <title>Watch Party</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/variables.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        padding: 16px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        overflow-y: auto;
+      }
+
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+      .section-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .row input {
+        flex: 1;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: var(--text-tertiary);
+        margin-top: 6px;
+      }
+
+      .status {
+        font-size: 13px;
+        margin-top: 10px;
+        padding: 8px 10px;
+        border-radius: var(--radius-sm);
+      }
+
+      .status.error {
+        background: rgba(244, 67, 54, 0.12);
+        color: var(--error);
+      }
+
+      .status.info {
+        background: rgba(33, 150, 243, 0.12);
+        color: var(--info);
+      }
+
+      .room-code-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+        margin-bottom: 16px;
+      }
+
+      .room-code-row code {
+        font-family: var(--font-mono);
+        font-size: 15px;
+        letter-spacing: 0.03em;
+        flex: 1;
+      }
+
+      .roster-list {
+        list-style: none;
+        margin: 0 0 16px 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .roster-list li {
+        font-size: 13px;
+        color: var(--text-secondary);
+        padding: 4px 0;
+      }
+
+      .roster-list li.self {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      .chat-log {
+        height: 180px;
+        overflow-y: auto;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .chat-message {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .chat-message .who {
+        font-weight: 600;
+        margin-right: 4px;
+      }
+
+      .chat-message.self .who {
+        color: var(--accent-light);
+      }
+
+      .chat-message.system {
+        color: var(--text-tertiary);
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="setupView">
+      <h1><span>Watch Party</span></h1>
+
+      <div class="section">
+        <div class="section-title">Your name</div>
+        <input type="text" id="displayNameInput" placeholder="Guest" maxlength="24" />
+      </div>
+
+      <div class="section">
+        <div class="section-title">Host a party</div>
+        <button id="hostBtn" type="button">Start Hosting</button>
+        <div class="hint">Everyone else connects to you — keep this window open.</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Join a party</div>
+        <div class="row">
+          <input type="text" id="joinCodeInput" placeholder="nflx-xxxxx" />
+          <button id="joinBtn" class="secondary" type="button">Join</button>
+        </div>
+      </div>
+
+      <div id="setupStatus" class="status error" style="display: none"></div>
+    </div>
+
+    <div id="partyView" style="display: none">
+      <h1>
+        <span>Watch Party</span>
+        <button id="leaveBtn" class="danger" type="button">Leave</button>
+      </h1>
+
+      <div class="room-code-row" id="roomCodeRow">
+        <span>Room code:</span>
+        <code id="roomCodeText"></code>
+        <button id="copyCodeBtn" class="secondary" type="button">Copy</button>
+      </div>
+
+      <div class="section-title">Watching with</div>
+      <ul id="rosterList" class="roster-list"></ul>
+
+      <div class="section-title">Chat</div>
+      <div id="chatLog" class="chat-log"></div>
+      <div class="row">
+        <input type="text" id="chatInput" placeholder="Say something..." maxlength="300" />
+        <button id="sendChatBtn" type="button">Send</button>
+      </div>
+
+      <div id="partyStatus" class="status info" style="display: none"></div>
+    </div>
+
+    <script src="vendor/peerjs.min.js"></script>
+    <script src="watchPartyClient.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>

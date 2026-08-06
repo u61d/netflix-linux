@@ -44,3 +44,4 @@ temp/
 .node_repl_history
 
 *.tgz
+*.patch

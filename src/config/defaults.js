@@ -64,6 +64,8 @@ const DEFAULTS = {
   subtitleEdgeStyle: 'dropshadow',
   subtitleVerticalOffset: 0,
 
+  watchPartyDisplayName: '',
+
   watchHistory: [],
   watchQueue: [],
   lastSessionState: null,

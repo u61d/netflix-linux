@@ -90,6 +90,7 @@ describe('WindowManager', () => {
         error: jest.fn(),
         debug: jest.fn(),
       },
+      getService: jest.fn(),
     };
 
     manager = new WindowManager(ctx);
@@ -208,6 +209,51 @@ describe('WindowManager', () => {
       const window = manager.createSettingsWindow();
 
       expect(BrowserWindow).toHaveBeenCalled();
+    });
+  });
+
+  describe('createWatchPartyWindow', () => {
+    beforeEach(() => {
+      manager.windows.set('main', mockWindow);
+    });
+
+    it('should create the watch party window', () => {
+      const win = manager.createWatchPartyWindow();
+
+      expect(BrowserWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Watch Party' })
+      );
+      expect(win).toBe(mockWindow);
+    });
+
+    it('stops the watch party service once the window closes', () => {
+      const watchPartyService = { stop: jest.fn() };
+      ctx.getService.mockReturnValue(watchPartyService);
+
+      manager.createWatchPartyWindow();
+      const closedHandlers = mockWindow.on.mock.calls
+        .filter(([event]) => event === 'closed')
+        .map(([, handler]) => handler);
+      closedHandlers.forEach((handler) => handler());
+
+      expect(watchPartyService.stop).toHaveBeenCalled();
+    });
+  });
+
+  describe('getWindow', () => {
+    it('returns the window when it exists and is not destroyed', () => {
+      manager.windows.set('queue', mockWindow);
+      expect(manager.getWindow('queue')).toBe(mockWindow);
+    });
+
+    it('returns null when the window was destroyed', () => {
+      const destroyed = { ...mockWindow, isDestroyed: jest.fn().mockReturnValue(true) };
+      manager.windows.set('queue', destroyed);
+      expect(manager.getWindow('queue')).toBeNull();
+    });
+
+    it('returns null when no such window exists', () => {
+      expect(manager.getWindow('nope')).toBeNull();
     });
   });
 

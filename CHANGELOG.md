@@ -4,6 +4,7 @@
 
 ### Added
 
+- Watch Party: sync play/pause/seek and text chat with friends over a direct P2P connection (PeerJS), star topology with the host as room code — no server to run
 - Subtitle customization: size, font, color, background/opacity, edge style, and vertical position, with live preview in Settings
 - Selector health check for subtitles, same idea as the auto-skip one
 - Subtitle DOM selectors moved into `selectors.json` with the skip-button ones

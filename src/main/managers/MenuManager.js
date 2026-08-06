@@ -73,6 +73,11 @@ class MenuManager {
             accelerator: 'Ctrl+Shift+Q',
             click: () => windowManager.createQueueWindow(),
           },
+          {
+            label: 'Watch Party...',
+            accelerator: 'Ctrl+Shift+W',
+            click: () => windowManager.createWatchPartyWindow(),
+          },
           { type: 'separator' },
           {
             label: 'Clear History',
