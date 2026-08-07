@@ -3,7 +3,7 @@
 Unofficial Netflix desktop client for Linux with DRM support, Discord Rich Presence, and playback features.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.1.0-green.svg)
+![Version](https://img.shields.io/badge/version-2.2.0-green.svg)
 ![GitHub stars](https://img.shields.io/github/stars/u61d/netflix-linux?style=flat)
 ![GitHub issues](https://img.shields.io/github/issues/u61d/netflix-linux?style=flat)
 ![GitHub downloads](https://img.shields.io/github/downloads/u61d/netflix-linux/total?style=flat)

@@ -1,13 +1,24 @@
 # Changelog
 
-## [Unreleased]
+## [2.2.0] - 2026-08-07
 
 ### Added
 
 - Watch Party: sync play/pause/seek and text chat with friends over a direct P2P connection (PeerJS), star topology with the host as room code — no server to run
+- Watch Party host migration: if the host disconnects, the party elects a new host from the existing roster and everyone reconnects automatically instead of the party just ending
 - Subtitle customization: size, font, color, background/opacity, edge style, and vertical position, with live preview in Settings
 - Selector health check for subtitles, same idea as the auto-skip one
 - Subtitle DOM selectors moved into `selectors.json` with the skip-button ones
+- Screenshot format setting (PNG/JPEG) with a quality slider for JPEG
+
+### Fixed
+
+- `screenshotFormat`/`screenshotQuality` settings existed but were silently ignored — screenshots always saved as PNG regardless of what was configured
+- Watch Party's room join had no timeout, so a mistyped or dead room code would hang forever with no feedback
+
+### Security
+
+- Removed `unsafe-inline` from the script-src CSP on every window (settings, history, keybinds, profiles, queue) by extracting inline scripts to external files and replacing inline `onclick` handlers with event listeners
 
 ## [2.1.0] - 2026-05-02
 
