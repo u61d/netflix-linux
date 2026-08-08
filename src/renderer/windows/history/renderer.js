@@ -97,7 +97,7 @@ function renderHistory(history) {
   container.innerHTML = history
     .map((item) => {
       return `
-          <div class="history-item">
+          <div class="history-item enter">
             <div class="title">${item.title || 'Unknown Title'}</div>
             <div class="metadata">
               <span title="Duration">

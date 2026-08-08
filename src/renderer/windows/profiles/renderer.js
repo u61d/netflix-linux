@@ -8,7 +8,7 @@ async function loadProfiles() {
     container.innerHTML = Object.entries(profiles)
       .map(
         ([id, profile]) => `
-          <div class="profile-item ${id === current ? 'active' : ''}">
+          <div class="profile-item enter ${id === current ? 'active' : ''}">
             <div class="profile-info">
               <div class="profile-name">${profile.name} ${id === current ? '✓' : ''}</div>
               <div class="profile-url">${profile.url}</div>

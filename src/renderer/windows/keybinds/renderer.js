@@ -71,7 +71,7 @@ function init() {
         .map(([action, label]) => {
           const currentKey = keybinds[action] || '';
           return `
-              <div class="keybind-item">
+              <div class="keybind-item enter">
                 <div class="action-name">${label}</div>
                 <input
                   type="text"

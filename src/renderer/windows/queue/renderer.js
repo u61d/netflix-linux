@@ -15,7 +15,9 @@ function formatDate(timestamp) {
 
 function showStatus(message, type = 'success') {
   const el = document.getElementById('status');
-  el.className = `status ${type}`;
+  el.classList.remove('enter-status');
+  void el.offsetWidth; // force reflow so the entrance animation restarts every call
+  el.className = `status ${type} enter-status`;
   el.textContent = message;
   setTimeout(() => {
     if (el.textContent === message) el.textContent = '';
@@ -47,7 +49,7 @@ function render(items) {
     .map((item, index) => {
       const pinned = item.pinned ? 'Pinned' : 'Normal';
       return `
-              <div class="queue-item" draggable="true" data-index="${index}" data-id="${escapeHtml(item.id)}" data-pinned="${item.pinned ? 'true' : 'false'}">
+              <div class="queue-item enter" draggable="true" data-index="${index}" data-id="${escapeHtml(item.id)}" data-pinned="${item.pinned ? 'true' : 'false'}">
                 <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
                 <div class="queue-item-info">
                   <div class="title">${escapeHtml(item.title || 'Unknown Title')}</div>

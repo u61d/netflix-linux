@@ -31,8 +31,11 @@ function setPartyStatus(message) {
     el.style.display = 'none';
     return;
   }
+  el.classList.remove('enter-status');
+  void el.offsetWidth; // force reflow so the entrance animation restarts every call
   el.textContent = message;
   el.style.display = 'block';
+  el.classList.add('enter-status');
 }
 
 function renderRoster(roster) {
@@ -42,6 +45,7 @@ function renderRoster(roster) {
   roster.forEach(({ id, displayName }) => {
     const li = document.createElement('li');
     li.textContent = id === selfId ? `${displayName} (you)` : displayName;
+    li.classList.add('enter');
     if (id === selfId) li.classList.add('self');
     list.appendChild(li);
   });
@@ -50,7 +54,9 @@ function renderRoster(roster) {
 function appendChatMessage({ displayName, message, self, system }) {
   const log = $('chatLog');
   const row = document.createElement('div');
-  row.className = ['chat-message', self && 'self', system && 'system'].filter(Boolean).join(' ');
+  row.className = ['chat-message', 'enter', self && 'self', system && 'system']
+    .filter(Boolean)
+    .join(' ');
 
   if (!system) {
     const who = document.createElement('span');
@@ -126,13 +132,28 @@ async function saveDisplayName() {
   return name || 'Guest';
 }
 
+async function withLoading(button, task, loadingLabel) {
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.classList.add('is-loading');
+  button.innerHTML = `<span class="spinner"></span>${loadingLabel || button.textContent}`;
+
+  try {
+    return await task();
+  } finally {
+    button.disabled = false;
+    button.classList.remove('is-loading');
+    button.innerHTML = original;
+  }
+}
+
 async function startHosting() {
   const displayName = await saveDisplayName();
   client = new window.WatchPartyClient(window.Peer, { displayName });
   wireClientEvents();
 
   try {
-    const roomId = await client.hostRoom();
+    const roomId = await withLoading($('hostBtn'), () => client.hostRoom(), 'Starting...');
     selfId = roomId;
     showParty(roomId, true);
     window.watchPartyAPI.setActive(true);
@@ -154,7 +175,7 @@ async function joinParty() {
   wireClientEvents();
 
   try {
-    const roomId = await client.joinRoom(code);
+    const roomId = await withLoading($('joinBtn'), () => client.joinRoom(code), 'Connecting...');
     selfId = client.peer.id;
     showParty(roomId, false);
     window.watchPartyAPI.setActive(true);

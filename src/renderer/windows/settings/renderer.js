@@ -14,9 +14,26 @@ function setValue(id, value, fallback = '') {
 
 function showStatus(message, type = 'info') {
   const el = $('statusMessage');
+  el.classList.remove('enter-status');
+  void el.offsetWidth; // force reflow so the entrance animation restarts every call
   el.style.display = 'block';
-  el.className = `status ${type}`;
+  el.className = `status ${type} enter-status`;
   el.textContent = message;
+}
+
+async function withLoading(button, task, loadingLabel) {
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.classList.add('is-loading');
+  button.innerHTML = `<span class="spinner"></span>${loadingLabel || button.textContent}`;
+
+  try {
+    return await task();
+  } finally {
+    button.disabled = false;
+    button.classList.remove('is-loading');
+    button.innerHTML = original;
+  }
 }
 
 function hideStatus() {
@@ -213,9 +230,15 @@ async function saveSettings() {
 
 async function checkUpdatesNow() {
   try {
-    showStatus('Checking for updates...', 'info');
-    await window.settingsAPI.checkUpdatesNow();
-    await loadUpdateStatus();
+    await withLoading(
+      $('checkUpdatesBtn'),
+      async () => {
+        showStatus('Checking for updates...', 'info');
+        await window.settingsAPI.checkUpdatesNow();
+        await loadUpdateStatus();
+      },
+      'Checking...'
+    );
     showStatus('Update check finished.', 'success');
   } catch (error) {
     showStatus(`Update check failed: ${error.message}`, 'error');
@@ -230,7 +253,11 @@ async function rollbackSelected() {
   }
 
   try {
-    await window.settingsAPI.rollbackVersion(tag);
+    await withLoading(
+      $('rollbackBtn'),
+      () => window.settingsAPI.rollbackVersion(tag),
+      'Opening...'
+    );
     showStatus(`Opened release page for ${tag}.`, 'success');
   } catch (error) {
     showStatus(`Rollback failed: ${error.message}`, 'error');
@@ -240,10 +267,16 @@ async function rollbackSelected() {
 async function runSelectorHealth() {
   if (selectorHealthInFlight) return;
   selectorHealthInFlight = true;
-  $('runSelectorHealthBtn').disabled = true;
   try {
     $('selectorHealthOutput').textContent = 'Running diagnostics...';
-    const result = await window.settingsAPI.checkSelectorHealth();
+    const result = await withLoading(
+      $('runSelectorHealthBtn'),
+      () => window.settingsAPI.checkSelectorHealth(),
+      'Checking...'
+    );
+    $('selectorHealthOutput').classList.remove('enter');
+    void $('selectorHealthOutput').offsetWidth; // force reflow so the entrance animation restarts
+    $('selectorHealthOutput').classList.add('enter');
     $('selectorHealthOutput').textContent = formatSelectorHealth(result);
     if (result?.invalid > 0) {
       showStatus(`Selector check found ${result.invalid} invalid selector(s).`, 'error');
@@ -255,7 +288,6 @@ async function runSelectorHealth() {
     showStatus(`Selector check failed: ${error.message}`, 'error');
   } finally {
     selectorHealthInFlight = false;
-    $('runSelectorHealthBtn').disabled = false;
   }
 }
 
@@ -324,7 +356,11 @@ function updateSubtitlePreview() {
 
 async function reapplySubtitleStyle() {
   try {
-    await window.settingsAPI.reapplySubtitleStyle();
+    await withLoading(
+      $('reapplySubtitleBtn'),
+      () => window.settingsAPI.reapplySubtitleStyle(),
+      'Applying...'
+    );
     showStatus('Subtitle style re-applied to the main window.', 'success');
   } catch (error) {
     showStatus(`Could not re-apply subtitle style: ${error.message}`, 'error');
@@ -333,10 +369,17 @@ async function reapplySubtitleStyle() {
 
 async function checkSubtitleSelectors() {
   const output = $('subtitleSelectorOutput');
+  output.classList.remove('enter');
+  void output.offsetWidth; // force reflow so the entrance animation restarts every call
   output.style.display = 'block';
+  output.classList.add('enter');
   output.textContent = 'Checking...';
   try {
-    const result = await window.settingsAPI.checkSubtitleSelectors();
+    const result = await withLoading(
+      $('checkSubtitleSelectorsBtn'),
+      () => window.settingsAPI.checkSubtitleSelectors(),
+      'Checking...'
+    );
     if (!result) {
       output.textContent = 'No main window available to check.';
       return;
