@@ -21,6 +21,9 @@ const VALIDATION_SCHEMAS = {
   discordEnabled: {
     type: 'boolean',
   },
+  mprisEnabled: {
+    type: 'boolean',
+  },
   autoCheckUpdates: {
     type: 'boolean',
   },

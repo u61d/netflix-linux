@@ -35,6 +35,7 @@ const DEFAULT_KEYBINDS = {
 
 const DEFAULTS = {
   discordEnabled: true,
+  mprisEnabled: true,
   discordClientId: '1437240728987369513',
   rpcRetryMs: 7000,
   autoCheckUpdates: true,

@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog } = require('electron');
 const AppContext = require('./AppContext');
 const WindowManager = require('./managers/WindowManager');
 const RpcManager = require('./managers/RpcManager');
+const MprisManager = require('./managers/MprisManager');
 const KeybindManager = require('./managers/KeybindManager');
 const MenuManager = require('./managers/MenuManager');
 const TrayManager = require('./managers/TrayManager');
@@ -141,12 +142,14 @@ async function initializeApp() {
 
   const windowManager = new WindowManager(ctx);
   const rpcManager = new RpcManager(ctx);
+  const mprisManager = new MprisManager(ctx);
   const keybindManager = new KeybindManager(ctx);
   const menuManager = new MenuManager(ctx);
   const trayManager = new TrayManager(ctx);
 
   ctx.registerManager('window', windowManager);
   ctx.registerManager('rpc', rpcManager);
+  ctx.registerManager('mpris', mprisManager);
   ctx.registerManager('keybind', keybindManager);
   ctx.registerManager('menu', menuManager);
   ctx.registerManager('tray', trayManager);
@@ -189,6 +192,7 @@ async function initializeApp() {
   if (!runtimeSafety.safeModeActive) {
     rpcManager.start();
     autoSkipper.start();
+    mprisManager.start();
   } else {
     dialog
       .showMessageBox(mainWindow, {

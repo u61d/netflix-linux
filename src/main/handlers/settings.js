@@ -10,6 +10,7 @@ module.exports = function setupSettingsHandlers(ctx) {
     try {
       return {
         discordEnabled: ctx.store.get('discordEnabled', true),
+        mprisEnabled: ctx.store.get('mprisEnabled', true),
         autoCheckUpdates: ctx.store.get('autoCheckUpdates', true),
         updateChannel: ctx.store.get('updateChannel', 'stable'),
         playbackSpeed: ctx.store.get('playbackSpeed', 1.0),
@@ -106,6 +107,15 @@ module.exports = function setupSettingsHandlers(ctx) {
           rpcManager.start();
         } else {
           rpcManager.stop();
+        }
+      }
+
+      if (hasChanged('mprisEnabled')) {
+        const mprisManager = ctx.getManager('mpris');
+        if (updates.mprisEnabled) {
+          mprisManager?.start();
+        } else {
+          mprisManager?.stop();
         }
       }
 
@@ -211,6 +221,7 @@ module.exports = function setupSettingsHandlers(ctx) {
         exported: new Date().toISOString(),
         settings: {
           discordEnabled: ctx.store.get('discordEnabled'),
+          mprisEnabled: ctx.store.get('mprisEnabled'),
           autoCheckUpdates: ctx.store.get('autoCheckUpdates'),
           updateChannel: ctx.store.get('updateChannel'),
           playbackSpeed: ctx.store.get('playbackSpeed'),

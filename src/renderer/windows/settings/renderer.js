@@ -103,6 +103,7 @@ async function loadSettings() {
   const s = await window.settingsAPI.getSettings();
 
   setChecked('discordEnabled', s.discordEnabled);
+  setChecked('mprisEnabled', s.mprisEnabled);
   setChecked('notificationsEnabled', s.notificationsEnabled);
   setChecked('quietMode', s.quietMode);
 
@@ -169,6 +170,7 @@ async function saveSettings() {
   try {
     const updates = {
       discordEnabled: $('discordEnabled').checked,
+      mprisEnabled: $('mprisEnabled').checked,
       notificationsEnabled: $('notificationsEnabled').checked,
       quietMode: $('quietMode').checked,
 

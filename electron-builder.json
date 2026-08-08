@@ -2,7 +2,7 @@
   "appId": "com.netflix.linux",
   "productName": "Netflix",
   "electronDownload": {
-    "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
+    "mirror": "https://github.com/castlabs/electron-releases/releases/download/"
   },
   "linux": {
     "target": ["pacman", "AppImage", "deb"],

@@ -138,10 +138,18 @@
     <h1>Settings</h1>
 
     <div class="section">
-      <div class="section-title">Discord & Notifications</div>
+      <div class="section-title">Integrations & Notifications</div>
       <div class="setting">
         <input type="checkbox" id="discordEnabled" />
         <label for="discordEnabled">Enable Discord Rich Presence</label>
+      </div>
+      <div class="setting">
+        <input type="checkbox" id="mprisEnabled" />
+        <label for="mprisEnabled">Enable media key / system media controls (MPRIS)</label>
+      </div>
+      <div class="hint">
+        Lets play/pause/seek work from keyboard media keys, playerctl, and desktop media widgets
+        (GNOME, KDE, waybar). Linux only.
       </div>
       <div class="setting">
         <input type="checkbox" id="notificationsEnabled" />
