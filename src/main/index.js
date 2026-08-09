@@ -24,12 +24,18 @@ if (process.platform === 'linux') {
 
 const SentryManager = require('./utils/sentry');
 const UpdateService = require('./services/UpdateService');
+const { isBenignDbusStreamError } = require('./utils/errorFilters');
 
 const ctx = new AppContext();
 const sentryManager = new SentryManager(ctx);
 let fatalShutdownRequested = false;
 
 process.on('uncaughtException', (error) => {
+  if (isBenignDbusStreamError(error)) {
+    ctx.logger.warn('D-Bus connection closed mid-message (harmless, ignoring):', error.message);
+    return;
+  }
+
   ctx.logger.error('Fatal error:', error);
   sentryManager.captureException(error);
   fatalShutdownRequested = true;
@@ -37,6 +43,11 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason) => {
+  if (isBenignDbusStreamError(reason)) {
+    ctx.logger.warn('D-Bus connection closed mid-message (harmless, ignoring):', reason.message);
+    return;
+  }
+
   ctx.logger.error('Unhandled promise rejection:', reason);
   sentryManager.captureException(reason);
 });
