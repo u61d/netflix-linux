@@ -1,4 +1,6 @@
-const { TITLE_SELECTORS } = require('../../config/selectors');
+const { pathToFileURL } = require('url');
+const { TITLE_SELECTORS, META_SELECTORS } = require('../../config/selectors');
+const { ASSETS } = require('../../config/constants');
 
 class MprisManager {
   constructor(ctx) {
@@ -164,11 +166,19 @@ class MprisManager {
   }
 
   _updateMetadata(state) {
+    const title = state.title
+      ? state.episodeInfo
+        ? `${state.title} — ${state.episodeInfo}`
+        : state.title
+      : 'Netflix';
+
     this.player.metadata = {
       'mpris:trackid': this.player.objectPath(`track/${Date.now()}`),
       'mpris:length': Math.floor((state.duration || 0) * 1e6),
-      'xesam:title': state.title || 'Netflix',
-      'xesam:album': 'Netflix',
+      'mpris:artUrl': pathToFileURL(ASSETS.icon).href,
+      'xesam:title': title,
+      'xesam:album': state.title || 'Netflix',
+      'xesam:artist': ['Netflix'],
     };
   }
 
@@ -178,14 +188,23 @@ class MprisManager {
         const video = document.querySelector('video');
         if (!video) return null;
 
-        const titleEl = document.querySelector(${JSON.stringify(TITLE_SELECTORS.join(', '))});
-        const title = (titleEl?.textContent || document.title || '').split('\\n')[0].trim();
+        const titleSelectors = ${JSON.stringify(TITLE_SELECTORS)};
+        let title = '';
+        for (const sel of titleSelectors) {
+          const text = (document.querySelector(sel)?.textContent || '').trim();
+          if (text) { title = text; break; }
+        }
+        if (!title) title = document.title || '';
+        title = title.split('\\n')[0].trim().replace(/\\s+-\\s+Netflix$/i, '');
+
+        const episodeInfo = (document.querySelector(${JSON.stringify(META_SELECTORS.videoMeta)})?.textContent || '').trim();
 
         return {
           playing: !video.paused && !video.ended,
           currentTime: video.currentTime || 0,
           duration: Number.isFinite(video.duration) ? video.duration : 0,
-          title: title.replace(/\\s+-\\s+Netflix$/i, ''),
+          title,
+          episodeInfo,
           url: window.location.href,
         };
       })();
