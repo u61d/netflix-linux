@@ -1,6 +1,20 @@
 const { pathToFileURL } = require('url');
+const path = require('path');
+const fs = require('fs');
+const { app } = require('electron');
 const { TITLE_SELECTORS, META_SELECTORS } = require('../../config/selectors');
 const { ASSETS } = require('../../config/constants');
+
+// electron-builder's extraResources config copies assets/ to resources/assets/
+// as real files, outside app.asar. ASSETS.icon resolves *inside* the asar —
+// fine for Electron's own patched fs, but an external MPRIS-consuming process
+// (a completely separate program) can't read into an asar archive at all, so
+// artUrl needs to point at the extraResources copy instead.
+function externalIconPath() {
+  if (!app.isPackaged) return ASSETS.icon; // dev mode: no asar involved at all
+  const candidate = path.join(process.resourcesPath, 'assets', 'icons', 'icon.png');
+  return fs.existsSync(candidate) ? candidate : null;
+}
 
 class MprisManager {
   constructor(ctx) {
@@ -11,6 +25,7 @@ class MprisManager {
     this.pollMs = 1000;
     this.lastState = { playing: false, currentTime: 0, duration: 0, title: '', url: '' };
     this.currentTrackKey = null;
+    this.titleResolved = false;
   }
 
   start() {
@@ -23,6 +38,7 @@ class MprisManager {
     this.active = true;
     this.lastState = { playing: false, currentTime: 0, duration: 0, title: '', url: '' };
     this.currentTrackKey = null;
+    this.titleResolved = false;
     this.interval = setInterval(() => this.poll(), this.pollMs);
     this.ctx.logger.info('MPRIS started');
   }
@@ -150,7 +166,16 @@ class MprisManager {
       const trackKey = state.url || state.title;
       if (trackKey !== this.currentTrackKey) {
         this.currentTrackKey = trackKey;
+        this.titleResolved = false;
+      }
+
+      // the title overlay only exists in Netflix's DOM while player controls
+      // are visible (hover/recent interaction), so the very first poll after
+      // a track change often finds nothing — keep retrying every poll until
+      // one actually lands on a real title, then stop to avoid needless churn
+      if (!this.titleResolved) {
         this._updateMetadata(state);
+        if (state.title) this.titleResolved = true;
       }
 
       // a jump bigger than normal playback drift means someone seeked
@@ -172,14 +197,20 @@ class MprisManager {
         : state.title
       : 'Netflix';
 
+    const iconPath = externalIconPath();
+
     this.player.metadata = {
       'mpris:trackid': this.player.objectPath(`track/${Date.now()}`),
       'mpris:length': Math.floor((state.duration || 0) * 1e6),
-      'mpris:artUrl': pathToFileURL(ASSETS.icon).href,
+      ...(iconPath ? { 'mpris:artUrl': pathToFileURL(iconPath).href } : {}),
       'xesam:title': title,
       'xesam:album': state.title || 'Netflix',
       'xesam:artist': ['Netflix'],
     };
+
+    this.ctx.logger.debug(
+      `MPRIS metadata: title="${state.title}" episodeInfo="${state.episodeInfo}" resolved=${Boolean(state.title)}`
+    );
   }
 
   async _readVideoState(win) {
