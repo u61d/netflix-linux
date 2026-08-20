@@ -154,7 +154,27 @@ describe('MprisManager', () => {
       expect(errorHandlerCall).toBeDefined();
 
       expect(() => errorHandlerCall[1](new Error('bus connection lost'))).not.toThrow();
-      expect(ctx.logger.warn).toHaveBeenCalledWith('MPRIS error:', 'bus connection lost');
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        'MPRIS error:',
+        expect.stringContaining('bus connection lost')
+      );
+    });
+
+    it('logs something useful even when the error is not a real Error instance', () => {
+      manager.start();
+
+      const errorHandlerCall = mockPlayerInstance.on.mock.calls.find(
+        ([event]) => event === 'error'
+      );
+
+      errorHandlerCall[1]({ type: 'org.freedesktop.DBus.Error.Failed', text: 'name taken' });
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        'MPRIS error:',
+        expect.stringContaining('name taken')
+      );
+
+      errorHandlerCall[1](undefined);
+      expect(ctx.logger.warn).toHaveBeenCalledWith('MPRIS error:', 'undefined');
     });
 
     it('getPosition reflects the last known state in microseconds', () => {
@@ -200,7 +220,10 @@ describe('MprisManager', () => {
     it('play swallows a rejected getState instead of crashing', async () => {
       playbackService.getState.mockRejectedValue(new Error('page gone'));
       await expect(handlerFor('play')()).resolves.toBeUndefined();
-      expect(ctx.logger.warn).toHaveBeenCalledWith('MPRIS play error:', 'page gone');
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        'MPRIS play error:',
+        expect.stringContaining('page gone')
+      );
     });
 
     it('pause only toggles when currently playing', async () => {
@@ -417,6 +440,38 @@ describe('MprisManager', () => {
       manager.start();
       mockWindow.webContents.executeJavaScript.mockRejectedValueOnce(new Error('gone'));
       await expect(manager.poll()).resolves.toBeUndefined();
+    });
+
+    it('still updates metadata even if setting playbackStatus throws', async () => {
+      manager.start();
+      let throwOnce = true;
+      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
+        configurable: true,
+        set: () => {
+          if (throwOnce) {
+            throwOnce = false;
+            throw new Error('stream is closed');
+          }
+        },
+      });
+
+      mockWindow.webContents.executeJavaScript.mockResolvedValueOnce(
+        stateResult({ title: 'Still Works' })
+      );
+      await expect(manager.poll()).resolves.toBeUndefined();
+
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        'MPRIS playbackStatus error:',
+        expect.stringContaining('stream is closed')
+      );
+      expect(mockPlayerInstance.metadata['xesam:title']).toBe('Still Works');
+
+      // restore the plain writable property other tests expect
+      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
+        configurable: true,
+        writable: true,
+        value: null,
+      });
     });
   });
 

@@ -16,6 +16,19 @@ function externalIconPath() {
   return fs.existsSync(candidate) ? candidate : null;
 }
 
+// dbus-next/mpris-service errors aren't always real Error instances — some
+// are plain objects or D-Bus error replies with no .message, which made
+// `error.message` log as blank and told us nothing when things went wrong.
+function describeError(error) {
+  if (!error) return String(error);
+  if (error instanceof Error) return error.stack || error.message || error.toString();
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
 class MprisManager {
   constructor(ctx) {
     this.ctx = ctx;
@@ -82,7 +95,7 @@ class MprisManager {
     // on the player. EventEmitter throws if 'error' has no listener, so this
     // isn't optional — without it a bad D-Bus connection crashes the app.
     this.player.on('error', (error) => {
-      this.ctx.logger.warn('MPRIS error:', error?.message || error);
+      this.ctx.logger.warn('MPRIS error:', describeError(error));
     });
 
     this.player.canGoNext = false;
@@ -102,7 +115,7 @@ class MprisManager {
         const state = await playback()?.getState();
         if (state && !state.playing) await playback().togglePlayPause();
       } catch (error) {
-        this.ctx.logger.warn('MPRIS play error:', error.message);
+        this.ctx.logger.warn('MPRIS play error:', describeError(error));
       }
     });
 
@@ -112,7 +125,7 @@ class MprisManager {
         const state = await playback()?.getState();
         if (state?.playing) await playback().togglePlayPause();
       } catch (error) {
-        this.ctx.logger.warn('MPRIS pause error:', error.message);
+        this.ctx.logger.warn('MPRIS pause error:', describeError(error));
       }
     });
 
@@ -162,31 +175,39 @@ class MprisManager {
 
     try {
       this.player.playbackStatus = state.playing ? 'Playing' : 'Paused';
+    } catch (error) {
+      this.ctx.logger.warn('MPRIS playbackStatus error:', describeError(error));
+    }
 
-      const trackKey = state.url || state.title;
-      if (trackKey !== this.currentTrackKey) {
-        this.currentTrackKey = trackKey;
-        this.titleResolved = false;
-      }
+    const trackKey = state.url || state.title;
+    if (trackKey !== this.currentTrackKey) {
+      this.currentTrackKey = trackKey;
+      this.titleResolved = false;
+    }
 
-      // the title overlay only exists in Netflix's DOM while player controls
-      // are visible (hover/recent interaction), so the very first poll after
-      // a track change often finds nothing — keep retrying every poll until
-      // one actually lands on a real title, then stop to avoid needless churn
-      if (!this.titleResolved) {
+    // the title overlay only exists in Netflix's DOM while player controls
+    // are visible (hover/recent interaction), so the very first poll after
+    // a track change often finds nothing — keep retrying every poll until
+    // one actually lands on a real title, then stop to avoid needless churn
+    if (!this.titleResolved) {
+      try {
         this._updateMetadata(state);
         if (state.title) this.titleResolved = true;
+      } catch (error) {
+        this.ctx.logger.warn('MPRIS metadata error:', describeError(error));
       }
+    }
 
-      // a jump bigger than normal playback drift means someone seeked
-      // outside MPRIS (e.g. dragged Netflix's own scrubber)
-      const expectedDelta = this.pollMs / 1000;
-      const actualDelta = state.currentTime - previous.currentTime;
-      if (Math.abs(actualDelta - expectedDelta) > 1.5) {
+    // a jump bigger than normal playback drift means someone seeked
+    // outside MPRIS (e.g. dragged Netflix's own scrubber)
+    const expectedDelta = this.pollMs / 1000;
+    const actualDelta = state.currentTime - previous.currentTime;
+    if (Math.abs(actualDelta - expectedDelta) > 1.5) {
+      try {
         this.player.seeked(Math.floor(state.currentTime * 1e6));
+      } catch (error) {
+        this.ctx.logger.warn('MPRIS seeked error:', describeError(error));
       }
-    } catch (error) {
-      this.ctx.logger.warn('MPRIS update error:', error.message);
     }
   }
 
