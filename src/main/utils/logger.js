@@ -2,6 +2,7 @@ const winston = require('winston');
 const path = require('path');
 const { app } = require('electron');
 const fs = require('fs');
+const { formatLogLine } = require('./logFormat');
 
 class Logger {
   constructor() {
@@ -19,9 +20,7 @@ class Logger {
       format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         winston.format.errors({ stack: true }),
-        winston.format.printf(({ timestamp, level, message, stack }) => {
-          return `[${timestamp}] ${level.toUpperCase()}: ${message}${stack ? '\n' + stack : ''}`;
-        })
+        winston.format.printf(formatLogLine)
       ),
       transports: [
         new winston.transports.Console({
