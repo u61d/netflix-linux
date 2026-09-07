@@ -4,6 +4,7 @@ const fs = require('fs');
 const { app } = require('electron');
 const { TITLE_SELECTORS, META_SELECTORS } = require('../../config/selectors');
 const { ASSETS } = require('../../config/constants');
+const { isBenignDbusStreamError } = require('../utils/errorFilters');
 
 // electron-builder's extraResources config copies assets/ to resources/assets/
 // as real files, outside app.asar. ASSETS.icon resolves *inside* the asar —
@@ -39,6 +40,7 @@ class MprisManager {
     this.lastState = { playing: false, currentTime: 0, duration: 0, title: '', url: '' };
     this.currentTrackKey = null;
     this.titleResolved = false;
+    this._connectionDead = false;
   }
 
   start() {
@@ -52,18 +54,35 @@ class MprisManager {
     this.lastState = { playing: false, currentTime: 0, duration: 0, title: '', url: '' };
     this.currentTrackKey = null;
     this.titleResolved = false;
-    this.interval = setInterval(() => this.poll(), this.pollMs);
+    this._scheduleNextPoll();
     this.ctx.logger.info('MPRIS started');
+  }
+
+  // poll() is async and executeJavaScript can occasionally take longer than
+  // pollMs (Netflix is a heavy page) — setInterval would fire the next poll
+  // before the previous one finished, and two overlapping D-Bus writes to
+  // the same connection is exactly the kind of thing that can corrupt it.
+  // Scheduling the next poll only after the current one resolves makes
+  // overlap structurally impossible instead of just unlikely.
+  _scheduleNextPoll() {
+    this.interval = setTimeout(async () => {
+      await this.poll();
+      if (this.active) this._scheduleNextPoll();
+    }, this.pollMs);
   }
 
   // doesn't tear down the D-Bus registration, just goes quiet — mpris-service
   // has no documented disconnect, and re-registering risks a name conflict
   stop() {
-    if (this.interval) clearInterval(this.interval);
+    if (this.interval) clearTimeout(this.interval);
     this.interval = null;
     this.active = false;
     if (this.player) {
-      this.player.playbackStatus = 'Stopped';
+      try {
+        this.player.playbackStatus = 'Stopped';
+      } catch {
+        // connection may already be dead; nothing more to do
+      }
     }
   }
 
@@ -91,10 +110,13 @@ class MprisManager {
       return false;
     }
 
+    this._connectionDead = false;
+
     // mpris-service re-emits any bus/connection failure as an 'error' event
     // on the player. EventEmitter throws if 'error' has no listener, so this
     // isn't optional — without it a bad D-Bus connection crashes the app.
     this.player.on('error', (error) => {
+      if (this._handleIfConnectionDead(error)) return;
       this.ctx.logger.warn('MPRIS error:', describeError(error));
     });
 
@@ -103,6 +125,20 @@ class MprisManager {
     this.player.getPosition = () => Math.floor((this.lastState.currentTime || 0) * 1e6);
 
     this._wireEvents();
+    return true;
+  }
+
+  // shared by the player's 'error' event and poll()'s own catch, since a
+  // dead connection can surface through either path — returns true if it
+  // handled (and stopped for) a confirmed-dead connection, false otherwise
+  _handleIfConnectionDead(error) {
+    if (!isBenignDbusStreamError(error)) return false;
+    if (this._connectionDead) return true; // already handled this session
+
+    this._connectionDead = true;
+    this.ctx.logger.warn('MPRIS: D-Bus connection appears closed, stopping until next app start.');
+    this.stop();
+    this.player = null;
     return true;
   }
 
@@ -176,6 +212,7 @@ class MprisManager {
     try {
       this.player.playbackStatus = state.playing ? 'Playing' : 'Paused';
     } catch (error) {
+      if (this._handleIfConnectionDead(error)) return;
       this.ctx.logger.warn('MPRIS playbackStatus error:', describeError(error));
     }
 
@@ -194,6 +231,7 @@ class MprisManager {
         this._updateMetadata(state);
         if (state.title) this.titleResolved = true;
       } catch (error) {
+        if (this._handleIfConnectionDead(error)) return;
         this.ctx.logger.warn('MPRIS metadata error:', describeError(error));
       }
     }
@@ -206,6 +244,7 @@ class MprisManager {
       try {
         this.player.seeked(Math.floor(state.currentTime * 1e6));
       } catch (error) {
+        if (this._handleIfConnectionDead(error)) return;
         this.ctx.logger.warn('MPRIS seeked error:', describeError(error));
       }
     }

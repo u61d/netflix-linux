@@ -11,6 +11,17 @@ describe('isBenignDbusStreamError', () => {
     expect(isBenignDbusStreamError(error)).toBe(true);
   });
 
+  it('matches the alternate wording from a different dbus-next call site', () => {
+    const error = new Error('Tried to write a message to a closed stream');
+    error.stack =
+      'Error: Tried to write a message to a closed stream\n' +
+      '    at EventEmitter.self.message (/app.asar/node_modules/dbus-next/lib/connection.js:92:26)\n' +
+      '    at MessageBus.send (/app.asar/node_modules/dbus-next/lib/bus.js:371:22)\n' +
+      '    at Player.set [as playbackStatus] (/app.asar/node_modules/mpris-service/src/index.js:292:13)';
+
+    expect(isBenignDbusStreamError(error)).toBe(true);
+  });
+
   it('does not match the same message from an unrelated stack', () => {
     const error = new Error('Cannot send message, stream is closed');
     error.stack =

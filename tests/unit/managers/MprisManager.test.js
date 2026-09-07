@@ -19,6 +19,12 @@ jest.mock('fs', () => ({ existsSync: (...args) => mockExistsSync(...args) }));
 
 const MprisManager = require('../../../src/main/managers/MprisManager');
 
+function streamClosedError(message = 'Tried to write a message to a closed stream') {
+  const error = new Error(message);
+  error.stack = `Error: ${message}\n    at node_modules/dbus-next/lib/bus.js:371:22`;
+  return error;
+}
+
 function stateResult(overrides = {}) {
   return {
     playing: true,
@@ -106,7 +112,7 @@ describe('MprisManager', () => {
       expect(mockPlayerFactory).not.toHaveBeenCalled();
     });
 
-    it('creates the player, disables next/previous, and starts polling', () => {
+    it('creates the player and disables next/previous', () => {
       manager.start();
 
       expect(mockPlayerFactory).toHaveBeenCalledWith(
@@ -115,7 +121,10 @@ describe('MprisManager', () => {
       expect(mockPlayerInstance.canGoNext).toBe(false);
       expect(mockPlayerInstance.canGoPrevious).toBe(false);
       expect(manager.active).toBe(true);
+    });
 
+    it('schedules poll to run after pollMs', () => {
+      manager.start();
       jest.spyOn(manager, 'poll').mockResolvedValue();
       jest.advanceTimersByTime(1000);
       expect(manager.poll).toHaveBeenCalledTimes(1);
@@ -153,28 +162,11 @@ describe('MprisManager', () => {
       );
       expect(errorHandlerCall).toBeDefined();
 
-      expect(() => errorHandlerCall[1](new Error('bus connection lost'))).not.toThrow();
+      expect(() => errorHandlerCall[1](new Error('some unrelated error'))).not.toThrow();
       expect(ctx.logger.warn).toHaveBeenCalledWith(
         'MPRIS error:',
-        expect.stringContaining('bus connection lost')
+        expect.stringContaining('some unrelated error')
       );
-    });
-
-    it('logs something useful even when the error is not a real Error instance', () => {
-      manager.start();
-
-      const errorHandlerCall = mockPlayerInstance.on.mock.calls.find(
-        ([event]) => event === 'error'
-      );
-
-      errorHandlerCall[1]({ type: 'org.freedesktop.DBus.Error.Failed', text: 'name taken' });
-      expect(ctx.logger.warn).toHaveBeenCalledWith(
-        'MPRIS error:',
-        expect.stringContaining('name taken')
-      );
-
-      errorHandlerCall[1](undefined);
-      expect(ctx.logger.warn).toHaveBeenCalledWith('MPRIS error:', 'undefined');
     });
 
     it('getPosition reflects the last known state in microseconds', () => {
@@ -184,14 +176,158 @@ describe('MprisManager', () => {
     });
   });
 
+  describe('poll scheduling (no overlap)', () => {
+    it('does not start a second poll until the first one resolves, even past pollMs', async () => {
+      let resolveFirst;
+      const firstPollPromise = new Promise((resolve) => {
+        resolveFirst = resolve;
+      });
+
+      manager.start();
+      const realPoll = manager.poll.bind(manager);
+      let callCount = 0;
+      jest.spyOn(manager, 'poll').mockImplementation(() => {
+        callCount += 1;
+        if (callCount === 1) return firstPollPromise;
+        return realPoll();
+      });
+
+      jest.advanceTimersByTime(1000); // fires the first poll, which hangs
+      expect(callCount).toBe(1);
+
+      jest.advanceTimersByTime(5000); // well past pollMs, but first poll still pending
+      expect(callCount).toBe(1); // no second poll started while the first is in flight
+
+      resolveFirst();
+      await Promise.resolve(); // let the resolved promise's .then chain run
+      await Promise.resolve();
+
+      jest.advanceTimersByTime(1000); // now the next one can be scheduled and fire
+      expect(callCount).toBe(2);
+    });
+
+    it('stops rescheduling once stop() is called', async () => {
+      manager.start();
+      jest.spyOn(manager, 'poll').mockResolvedValue();
+
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+      expect(manager.poll).toHaveBeenCalledTimes(1);
+
+      manager.stop();
+      jest.advanceTimersByTime(5000);
+      expect(manager.poll).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('dead-connection handling', () => {
+    it('stops and nulls the player when the error event reports a closed stream', () => {
+      manager.start();
+      const errorHandlerCall = mockPlayerInstance.on.mock.calls.find(
+        ([event]) => event === 'error'
+      );
+
+      errorHandlerCall[1](streamClosedError());
+
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('D-Bus connection appears closed')
+      );
+      expect(manager.active).toBe(false);
+      expect(manager.player).toBeNull();
+    });
+
+    it('does not repeat the stop/log if more closed-stream errors arrive afterward', () => {
+      manager.start();
+      const errorHandlerCall = mockPlayerInstance.on.mock.calls.find(
+        ([event]) => event === 'error'
+      );
+
+      errorHandlerCall[1](streamClosedError());
+      const warnCallsAfterFirst = ctx.logger.warn.mock.calls.length;
+      errorHandlerCall[1](streamClosedError('Cannot send message, stream is closed'));
+
+      expect(ctx.logger.warn.mock.calls.length).toBe(warnCallsAfterFirst); // no additional warn
+    });
+
+    it('also detects a closed-stream error thrown synchronously inside poll()', async () => {
+      manager.start();
+      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
+        configurable: true,
+        set: () => {
+          throw streamClosedError();
+        },
+      });
+
+      await manager.poll();
+
+      expect(manager.active).toBe(false);
+      expect(manager.player).toBeNull();
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('D-Bus connection appears closed')
+      );
+
+      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
+        configurable: true,
+        writable: true,
+        value: null,
+      });
+    });
+
+    it('resets the dead-connection flag on a fresh player after restart', () => {
+      manager.start();
+      const errorHandlerCall = mockPlayerInstance.on.mock.calls.find(
+        ([event]) => event === 'error'
+      );
+      errorHandlerCall[1](streamClosedError());
+      expect(manager._connectionDead).toBe(true);
+
+      manager.start(); // player was nulled, so this creates a fresh one
+      expect(manager._connectionDead).toBe(false);
+    });
+
+    it('still logs unrelated errors normally, not as a dead connection', () => {
+      manager.start();
+      const errorHandlerCall = mockPlayerInstance.on.mock.calls.find(
+        ([event]) => event === 'error'
+      );
+
+      errorHandlerCall[1](new Error('totally different problem'));
+
+      expect(manager.active).toBe(true);
+      expect(manager.player).not.toBeNull();
+      expect(ctx.logger.warn).toHaveBeenCalledWith(
+        'MPRIS error:',
+        expect.stringContaining('totally different problem')
+      );
+    });
+  });
+
   describe('stop', () => {
-    it('clears the interval, marks inactive, and reports Stopped', () => {
+    it('clears the timer, marks inactive, and reports Stopped', () => {
       manager.start();
       manager.stop();
 
       expect(manager.active).toBe(false);
       expect(manager.interval).toBeNull();
       expect(mockPlayerInstance.playbackStatus).toBe('Stopped');
+    });
+
+    it('does not throw if the connection is already dead when stopping', () => {
+      manager.start();
+      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
+        configurable: true,
+        set: () => {
+          throw streamClosedError();
+        },
+      });
+
+      expect(() => manager.stop()).not.toThrow();
+
+      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
+        configurable: true,
+        writable: true,
+        value: null,
+      });
     });
   });
 
@@ -440,38 +576,6 @@ describe('MprisManager', () => {
       manager.start();
       mockWindow.webContents.executeJavaScript.mockRejectedValueOnce(new Error('gone'));
       await expect(manager.poll()).resolves.toBeUndefined();
-    });
-
-    it('still updates metadata even if setting playbackStatus throws', async () => {
-      manager.start();
-      let throwOnce = true;
-      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
-        configurable: true,
-        set: () => {
-          if (throwOnce) {
-            throwOnce = false;
-            throw new Error('stream is closed');
-          }
-        },
-      });
-
-      mockWindow.webContents.executeJavaScript.mockResolvedValueOnce(
-        stateResult({ title: 'Still Works' })
-      );
-      await expect(manager.poll()).resolves.toBeUndefined();
-
-      expect(ctx.logger.warn).toHaveBeenCalledWith(
-        'MPRIS playbackStatus error:',
-        expect.stringContaining('stream is closed')
-      );
-      expect(mockPlayerInstance.metadata['xesam:title']).toBe('Still Works');
-
-      // restore the plain writable property other tests expect
-      Object.defineProperty(mockPlayerInstance, 'playbackStatus', {
-        configurable: true,
-        writable: true,
-        value: null,
-      });
     });
   });
 

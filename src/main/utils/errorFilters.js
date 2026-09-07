@@ -1,12 +1,16 @@
-// dbus-next (used by MPRIS) has a known race: an incoming D-Bus message can
-// arrive needing a reply after the underlying socket has already closed,
-// which throws synchronously from deep inside its own internals. It's
-// benign — doesn't touch app state, Netflix playback, or anything outside
-// the D-Bus subsystem — so it shouldn't be treated as a fatal error.
+// dbus-next (used by MPRIS) has a known class of failure where the
+// underlying socket/stream is already closed when something tries to use
+// it — an incoming message needing a reply, or an outgoing property-change
+// write. Different call sites inside dbus-next report it with slightly
+// different wording ("Cannot send message, stream is closed" vs "Tried to
+// write a message to a closed stream"), so match on the shared substance
+// rather than one exact phrase. It's benign — confined to the D-Bus
+// subsystem, doesn't touch app state or Netflix playback.
 function isBenignDbusStreamError(error) {
   const message = error?.message || '';
   const stack = error?.stack || '';
-  return message.includes('Cannot send message, stream is closed') && stack.includes('dbus-next');
+  const mentionsClosedStream = /stream/i.test(message) && /closed/i.test(message);
+  return mentionsClosedStream && stack.includes('dbus-next');
 }
 
 module.exports = { isBenignDbusStreamError };
