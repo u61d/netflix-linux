@@ -301,21 +301,6 @@ describe('mediaMetadata', () => {
     it('returns nothing when no selector matches', () => {
       expect(readTitleLines(docWith({}), ['h4'])).toEqual([]);
     });
-
-    // MprisManager stringifies this function into the page, so it must not
-    // reach anything in module scope or the injected copy throws at runtime
-    it('still works with nothing but its arguments in scope', () => {
-      const vm = require('vm');
-      const doc = {
-        querySelectorAll: (selector) =>
-          selector === '[data-uia="video-title"]' ? [block('Lupin', 'E3', 'Chapter 3')] : [],
-      };
-
-      const injected = vm.runInNewContext(`(${readTitleLines.toString()})`, {});
-      expect(JSON.stringify(injected(doc, ['[data-uia="video-title"]']))).toBe(
-        JSON.stringify(['Lupin', 'E3', 'Chapter 3'])
-      );
-    });
   });
 
   // what the preload calls; the title block shape is the one measured on the

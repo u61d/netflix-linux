@@ -1024,6 +1024,34 @@ describe('MprisManager', () => {
       expect(read.session).toBeNull();
     });
 
+    // The injected script carries its own copy of readTitleLines; this fails
+    // if it ever stops matching the shared one.
+    it('reads the same lines as the shared implementation', () => {
+      const { readTitleLines } = require('../../../src/shared/mediaMetadata');
+      const { TITLE_SELECTORS } = require('../../../src/config/selectors');
+
+      const fixtures = [
+        { '[data-uia="video-title"]': [titleBlock('Lupin', 'E3', 'Chapter 3')] },
+        { '[data-uia="video-title"]': [titleBlock('Stranger Things', 'S2:E5', 'Dig Dug')] },
+        { '[data-uia="video-title"]': [titleBlock('Glass Onion')] },
+        {
+          'h4.ellipsize-text': [leaf('Lupin')],
+          '[data-uia="video-title"]': [titleBlock('Lupin', 'E3', 'Chapter 3')],
+        },
+        { '[data-uia="video-title"]': [{ children: [], innerText: 'A\nB', textContent: 'A\nB' }] },
+        {},
+      ];
+
+      for (const nodes of fixtures) {
+        const injected = readPage({ ...nodes, video: [video] }).titleLines;
+        const shared = readTitleLines(
+          { querySelectorAll: (selector) => nodes[selector] || [] },
+          TITLE_SELECTORS
+        );
+        expect(injected).toEqual(shared);
+      }
+    });
+
     it('reports no video when the page has none', () => {
       const read = readPage({});
       expect(read.hasVideo).toBe(false);

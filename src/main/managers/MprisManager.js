@@ -9,7 +9,6 @@ const {
   buildMetadata,
   isEpisode,
   mergeTrack,
-  readTitleLines,
   resolveTrack,
 } = require('../../shared/mediaMetadata');
 
@@ -523,7 +522,39 @@ class MprisManager {
   _readPageState(win) {
     const script = `
       (function() {
-        const readTitleLines = ${readTitleLines.toString()};
+        // Deliberately a copy of readTitleLines() from shared/mediaMetadata,
+        // not that function stringified in: under coverage, istanbul rewrites
+        // the body with counters that reference module scope, and the
+        // injected copy then throws. A test in MprisManager.test.js runs this
+        // and the shared one against the same DOM and fails if they drift.
+        function readTitleLines(doc, selectors) {
+          function linesOf(element) {
+            const lines = [];
+            for (const child of element.children || []) {
+              const text = (child.textContent || '').trim();
+              if (text) lines.push(text);
+            }
+            if (lines.length) return lines;
+
+            const own = (element.innerText || element.textContent || '').trim();
+            return own
+              .split('\\n')
+              .map(function (line) {
+                return line.trim();
+              })
+              .filter(Boolean);
+          }
+
+          const singles = [];
+          for (const selector of selectors) {
+            for (const element of doc.querySelectorAll(selector)) {
+              const lines = linesOf(element);
+              if (lines.length > 1) return lines;
+              if (lines.length === 1) singles.push(lines[0]);
+            }
+          }
+          return singles;
+        }
 
         const result = {
           hasVideo: false,
@@ -545,8 +576,6 @@ class MprisManager {
         result.volume = Number.isFinite(video.volume) ? video.volume : 1;
         result.muted = Boolean(video.muted);
 
-        // readTitleLines is stringified in from the shared module so the
-        // page and the preload read the DOM the same way.
         result.titleLines = readTitleLines(document, ${JSON.stringify(TITLE_SELECTORS)});
 
         const meta = document.querySelector(${JSON.stringify(META_SELECTORS.videoMeta)});

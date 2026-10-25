@@ -288,9 +288,9 @@ function resolveNumbers({ lines, metaText, documentTitle, session, combined }) {
  * take one line per child element rather than splitting text that has nothing
  * to split on.
  *
- * MprisManager injects this into the page by stringifying it, so it has to
- * stay self-contained: parameters and page globals only, nothing from module
- * scope. There is a test that evaluates it in an empty context to enforce that.
+ * MprisManager keeps a copy of this inside its injected page script, because
+ * stringifying this one breaks under coverage instrumentation. Its test runs
+ * both against the same DOM so the two cannot drift apart.
  */
 function readTitleLines(doc, selectors) {
   function linesOf(element) {
