@@ -37,6 +37,10 @@ function loadSelectors() {
       meta: {
         videoMeta: '[data-uia="video-meta"]',
       },
+      player: {
+        nextEpisode:
+          '[data-uia="next-episode-seamless-button"], [data-uia="control-next"], button[aria-label="Next Episode"], button[title="Next Episode"]',
+      },
     };
   }
 }
@@ -47,12 +51,14 @@ const SKIP_SELECTORS = selectors.skip;
 const TITLE_SELECTORS = selectors.title;
 const META_SELECTORS = selectors.meta;
 const SUBTITLE_SELECTORS = selectors.subtitle;
+const PLAYER_SELECTORS = selectors.player;
 
 module.exports = {
   SKIP_SELECTORS,
   TITLE_SELECTORS,
   META_SELECTORS,
   SUBTITLE_SELECTORS,
+  PLAYER_SELECTORS,
   reloadSelectors: () => {
     cachedSelectors = null;
     return loadSelectors();

@@ -1,4 +1,5 @@
 const { SPEEDS } = require('../../config/constants');
+const { PLAYER_SELECTORS } = require('../../config/selectors');
 const NotificationService = require('../utils/notifications');
 
 class PlaybackService {
@@ -159,6 +160,68 @@ class PlaybackService {
       return result;
     } catch (error) {
       this.ctx.logger.error('Volume adjustment error:', error);
+      return null;
+    }
+  }
+
+  // MPRIS exposes a volume slider that gets dragged continuously, so unlike
+  // adjustVolume() this sets an absolute level and stays quiet — a toast per
+  // slider pixel would be unusable.
+  async setVolume(level) {
+    const win = this.ctx.getMainWindow();
+    if (!win) return null;
+
+    const safeLevel = Math.max(0, Math.min(1, Number(level) || 0));
+
+    const script = `
+      (function() {
+        const video = document.querySelector('video');
+        if (!video) return null;
+        video.volume = ${safeLevel};
+        if (${safeLevel} > 0 && video.muted) video.muted = false;
+        return { volume: video.volume, muted: video.muted };
+      })();
+    `;
+
+    try {
+      return await win.webContents.executeJavaScript(script, true);
+    } catch (error) {
+      this.ctx.logger.error('setVolume error:', error);
+      return null;
+    }
+  }
+
+  async nextEpisode() {
+    const win = this.ctx.getMainWindow();
+    if (!win) return null;
+
+    const script = `
+      (function() {
+        const button = document.querySelector(${JSON.stringify(PLAYER_SELECTORS.nextEpisode)});
+        if (!button) return { status: 'unavailable' };
+        button.click();
+        return { status: 'clicked' };
+      })();
+    `;
+
+    try {
+      const result = await win.webContents.executeJavaScript(script, true);
+      if (result?.status === 'clicked') {
+        this.ctx.logger.debug('Advanced to next episode');
+        return result;
+      }
+
+      // The next-episode button is only in the DOM while the player controls
+      // are on screen. Netflix also binds Shift+N to the same action, and
+      // sendInputEvent produces a trusted key event, so it works even with
+      // the controls hidden.
+      win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'N', modifiers: ['shift'] });
+      win.webContents.sendInputEvent({ type: 'char', keyCode: 'N', modifiers: ['shift'] });
+      win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'N', modifiers: ['shift'] });
+      this.ctx.logger.debug('Requested next episode via Shift+N');
+      return { status: 'keyboard' };
+    } catch (error) {
+      this.ctx.logger.error('nextEpisode error:', error);
       return null;
     }
   }

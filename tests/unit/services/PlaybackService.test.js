@@ -1,5 +1,3 @@
-
-
 const PlaybackService = require('../../../src/main/services/PlaybackService');
 
 describe('PlaybackService', () => {
@@ -8,7 +6,6 @@ describe('PlaybackService', () => {
   let mockWindow;
 
   beforeEach(() => {
-    
     ctx = {
       store: {
         get: jest.fn(),
@@ -23,7 +20,6 @@ describe('PlaybackService', () => {
       getManager: jest.fn(),
     };
 
-    
     mockWindow = {
       webContents: {
         executeJavaScript: jest.fn(),
@@ -55,10 +51,10 @@ describe('PlaybackService', () => {
         speed: 4.0,
       });
 
-      await service.setSpeed(10.0); 
+      await service.setSpeed(10.0);
 
       const executeCall = mockWindow.webContents.executeJavaScript.mock.calls[0][0];
-      expect(executeCall).toContain('4'); 
+      expect(executeCall).toContain('4');
     });
 
     it('should handle errors gracefully', async () => {
@@ -95,7 +91,6 @@ describe('PlaybackService', () => {
 
       await service.cycleSpeed(1);
 
-      
       const executeCall = mockWindow.webContents.executeJavaScript.mock.calls[0][0];
       expect(executeCall).toContain('4');
     });
@@ -122,6 +117,84 @@ describe('PlaybackService', () => {
 
       expect(result).toEqual({ action: 'pause' });
       expect(ctx.logger.debug).toHaveBeenCalledWith('Video pause');
+    });
+  });
+  describe('setVolume', () => {
+    beforeEach(() => {
+      mockWindow.webContents.sendInputEvent = jest.fn();
+    });
+
+    it('should set an absolute level without notifying', async () => {
+      mockWindow.webContents.executeJavaScript.mockResolvedValue({ volume: 0.4, muted: false });
+
+      const result = await service.setVolume(0.4);
+
+      expect(result).toEqual({ volume: 0.4, muted: false });
+      expect(mockWindow.webContents.executeJavaScript.mock.calls[0][0]).toContain(
+        'video.volume = 0.4'
+      );
+    });
+
+    it('should clamp out-of-range levels', async () => {
+      mockWindow.webContents.executeJavaScript.mockResolvedValue({ volume: 1, muted: false });
+
+      await service.setVolume(5);
+      expect(mockWindow.webContents.executeJavaScript.mock.calls[0][0]).toContain(
+        'video.volume = 1'
+      );
+
+      await service.setVolume(-2);
+      expect(mockWindow.webContents.executeJavaScript.mock.calls[1][0]).toContain(
+        'video.volume = 0'
+      );
+    });
+
+    it('should return null when there is no window', async () => {
+      ctx.getMainWindow.mockReturnValue(null);
+      expect(await service.setVolume(0.5)).toBeNull();
+    });
+
+    it('should swallow a page error', async () => {
+      mockWindow.webContents.executeJavaScript.mockRejectedValue(new Error('gone'));
+
+      expect(await service.setVolume(0.5)).toBeNull();
+      expect(ctx.logger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('nextEpisode', () => {
+    beforeEach(() => {
+      mockWindow.webContents.sendInputEvent = jest.fn();
+    });
+
+    it('should click the next-episode control when it is on screen', async () => {
+      mockWindow.webContents.executeJavaScript.mockResolvedValue({ status: 'clicked' });
+
+      const result = await service.nextEpisode();
+
+      expect(result).toEqual({ status: 'clicked' });
+      expect(mockWindow.webContents.sendInputEvent).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to Shift+N when the control is hidden', async () => {
+      mockWindow.webContents.executeJavaScript.mockResolvedValue({ status: 'unavailable' });
+
+      const result = await service.nextEpisode();
+
+      expect(result).toEqual({ status: 'keyboard' });
+      expect(mockWindow.webContents.sendInputEvent).toHaveBeenCalledTimes(3);
+      expect(mockWindow.webContents.sendInputEvent).toHaveBeenCalledWith({
+        type: 'keyDown',
+        keyCode: 'N',
+        modifiers: ['shift'],
+      });
+    });
+
+    it('should swallow a page error', async () => {
+      mockWindow.webContents.executeJavaScript.mockRejectedValue(new Error('gone'));
+
+      expect(await service.nextEpisode()).toBeNull();
+      expect(ctx.logger.error).toHaveBeenCalled();
     });
   });
 });

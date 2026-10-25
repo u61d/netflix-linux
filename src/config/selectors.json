@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "lastUpdated": "2026-08-04",
+  "version": 4,
+  "lastUpdated": "2026-10-25",
   "selectors": {
     "subtitle": {
       "container": ".player-timedtext",
@@ -23,6 +23,9 @@
     ],
     "meta": {
       "videoMeta": "[data-uia=\"video-meta\"]"
+    },
+    "player": {
+      "nextEpisode": "[data-uia=\"next-episode-seamless-button\"], [data-uia=\"control-next\"], button[aria-label=\"Next Episode\"], button[title=\"Next Episode\"]"
     }
   }
 }

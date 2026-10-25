@@ -5,8 +5,17 @@
 ### Added
 
 - MPRIS integration: media keys, `playerctl`, and GNOME/KDE media widgets can now see and control playback (play/pause/seek), Linux only. Toggle in Settings under Integrations.
+- MPRIS now shows the series, the season and episode number and the episode name instead of just "Netflix". Shows split into parts rather than seasons get the episode on its own, the way Netflix shows it.
 - Window open, list item, and status banner animations across Settings, History, Keybinds, Profiles, Queue, and Watch Party, with `prefers-reduced-motion` respected
 - Loading spinners on async buttons (update check, rollback, selector diagnostics, Watch Party host/join)
+
+### Fixed
+
+- MPRIS published an invalid `mpris:trackid`: it was built from the player name, and the hyphen in `netflix-linux` is not legal in a D-Bus object path. The bus closed the connection on the malformed message, so metadata never arrived and the player sat dead in media widgets.
+- MPRIS advertised the desktop entry as `Netflix`, but the installed file is `netflix-linux.desktop`, so shells could not find the app and showed the player with no icon.
+- MPRIS ran the title, the episode number and the episode name together into one string ("LupinE3Chapter 3"). `innerText` on Netflix's title block returns no separator between the children, so it is read a child at a time now.
+- MPRIS fell back to "Netflix" for the artist and the album at the same time, which read as "Netflix Netflix" in a widget.
+- MPRIS dropped back to "Netflix" whenever a poll found no title, instead of keeping what it already knew.
 
 ## [2.2.0] - 2026-08-07
 
