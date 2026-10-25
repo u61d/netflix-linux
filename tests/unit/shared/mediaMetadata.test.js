@@ -4,13 +4,15 @@ const {
   isEpisode,
   isGenericTitle,
   isSeasonEpisodeMarker,
-  parseSeasonEpisode,
   mergeTrack,
+  parseSeasonEpisode,
+  readTitleLines,
+  readTrack,
   resolveTrack,
   separateMarkers,
   splitShowAndEpisode,
   stripNetflixSuffix,
-} = require('../../../src/main/utils/mediaMetadata');
+} = require('../../../src/shared/mediaMetadata');
 
 describe('mediaMetadata', () => {
   describe('parseSeasonEpisode', () => {
@@ -247,6 +249,166 @@ describe('mediaMetadata', () => {
         expect(resolveTrack({ titleLines: [title] }).show).toBe(title);
       }
     );
+  });
+
+  describe('readTitleLines', () => {
+    const leaf = (text) => ({ children: [], textContent: text, innerText: text });
+
+    function block(...parts) {
+      const children = parts.filter(Boolean).map(leaf);
+      const glued = children.map((child) => child.textContent).join('');
+      // measured on the real app: innerText and textContent are identical
+      return { children, textContent: glued, innerText: glued };
+    }
+
+    const docWith = (nodes) => ({
+      querySelectorAll: (selector) => nodes[selector] || [],
+    });
+
+    it('takes one line per child of the title block', () => {
+      const doc = docWith({ '[data-uia="video-title"]': [block('Lupin', 'E3', 'Chapter 3')] });
+      expect(readTitleLines(doc, ['[data-uia="video-title"]'])).toEqual([
+        'Lupin',
+        'E3',
+        'Chapter 3',
+      ]);
+    });
+
+    it('stops at the first element with more than one piece', () => {
+      const inner = block('Lupin', 'E3', 'Chapter 3');
+      const doc = docWith({
+        '[data-uia="video-title"]': [inner],
+        '.video-title': [{ children: [inner], textContent: inner.textContent, innerText: '' }],
+      });
+
+      expect(readTitleLines(doc, ['[data-uia="video-title"]', '.video-title'])).toEqual([
+        'Lupin',
+        'E3',
+        'Chapter 3',
+      ]);
+    });
+
+    it('collects single-line matches when nothing yields more', () => {
+      const doc = docWith({ h4: [leaf('Glass Onion')], '.other': [leaf('Glass Onion')] });
+      expect(readTitleLines(doc, ['h4', '.other'])).toEqual(['Glass Onion', 'Glass Onion']);
+    });
+
+    it('falls back to the element text when it has no child elements', () => {
+      const doc = docWith({ h4: [{ children: [], innerText: 'A\nB', textContent: 'A\nB' }] });
+      expect(readTitleLines(doc, ['h4'])).toEqual(['A', 'B']);
+    });
+
+    it('returns nothing when no selector matches', () => {
+      expect(readTitleLines(docWith({}), ['h4'])).toEqual([]);
+    });
+
+    // MprisManager stringifies this function into the page, so it must not
+    // reach anything in module scope or the injected copy throws at runtime
+    it('still works with nothing but its arguments in scope', () => {
+      const vm = require('vm');
+      const doc = {
+        querySelectorAll: (selector) =>
+          selector === '[data-uia="video-title"]' ? [block('Lupin', 'E3', 'Chapter 3')] : [],
+      };
+
+      const injected = vm.runInNewContext(`(${readTitleLines.toString()})`, {});
+      expect(JSON.stringify(injected(doc, ['[data-uia="video-title"]']))).toBe(
+        JSON.stringify(['Lupin', 'E3', 'Chapter 3'])
+      );
+    });
+  });
+
+  // what the preload calls; the title block shape is the one measured on the
+  // real app, where [data-uia="video-meta"] is not present at all
+  describe('readTrack', () => {
+    const leaf = (text) => ({ children: [], textContent: text, innerText: text });
+
+    function titleBlock(...parts) {
+      const children = parts.filter(Boolean).map(leaf);
+      const glued = children.map((child) => child.textContent).join('');
+      return { children, textContent: glued, innerText: glued };
+    }
+
+    const docWith = (nodes, title = 'Netflix') => ({
+      title,
+      querySelector: (selector) => (nodes[selector] || [])[0] || null,
+      querySelectorAll: (selector) => nodes[selector] || [],
+    });
+
+    const TITLES = ['h4.ellipsize-text', '[data-uia="video-title"]'];
+    const META = '[data-uia="video-meta"]';
+
+    it('resolves a part-numbered show with no season', () => {
+      const doc = docWith({ '[data-uia="video-title"]': [titleBlock('Lupin', 'E3', 'Chapter 3')] });
+
+      expect(readTrack(doc, TITLES, META)).toEqual({
+        show: 'Lupin',
+        episodeTitle: 'Chapter 3',
+        season: null,
+        episode: 3,
+      });
+    });
+
+    it('resolves a show with seasons', () => {
+      const doc = docWith({
+        '[data-uia="video-title"]': [titleBlock('Stranger Things', 'S2:E5', 'Dig Dug')],
+      });
+
+      expect(readTrack(doc, TITLES, META)).toEqual({
+        show: 'Stranger Things',
+        episodeTitle: 'Dig Dug',
+        season: 2,
+        episode: 5,
+      });
+    });
+
+    it('resolves the localised episode form', () => {
+      const doc = docWith({
+        '[data-uia="video-title"]': [
+          titleBlock('BAKI-DOU: The Invincible Samurai', 'Flg. 2', 'Der Herzschlag'),
+        ],
+      });
+
+      expect(readTrack(doc, TITLES, META)).toEqual({
+        show: 'BAKI-DOU: The Invincible Samurai',
+        episodeTitle: 'Der Herzschlag',
+        season: null,
+        episode: 2,
+      });
+    });
+
+    it('resolves a film as a show with nothing else', () => {
+      const doc = docWith({ '[data-uia="video-title"]': [titleBlock('Glass Onion')] });
+
+      expect(readTrack(doc, TITLES, META)).toEqual({
+        show: 'Glass Onion',
+        episodeTitle: '',
+        season: null,
+        episode: null,
+      });
+    });
+
+    it('uses the meta element when it is there', () => {
+      const doc = docWith({
+        '[data-uia="video-title"]': [titleBlock('Dark', 'Secrets')],
+        '[data-uia="video-meta"]': [leaf('Season 3: Episode 8')],
+      });
+
+      expect(readTrack(doc, TITLES, META)).toMatchObject({ season: 3, episode: 8 });
+    });
+
+    it('falls back to the document title when the overlay is not rendered', () => {
+      expect(readTrack(docWith({}, 'Wednesday - Netflix'), TITLES, META).show).toBe('Wednesday');
+    });
+
+    it('resolves nothing on a generic page', () => {
+      expect(readTrack(docWith({}), TITLES, META)).toEqual({
+        show: '',
+        episodeTitle: '',
+        season: null,
+        episode: null,
+      });
+    });
   });
 
   describe('mergeTrack', () => {

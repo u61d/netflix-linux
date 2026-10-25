@@ -280,6 +280,68 @@ function resolveNumbers({ lines, metaText, documentTitle, session, combined }) {
 }
 
 /**
+ * Read Netflix's title block into separate lines.
+ *
+ * The block is
+ *   <div data-uia="video-title"><h4>Lupin</h4><span>E3</span><span>Chapter 3</span></div>
+ * and innerText returns "LupinE3Chapter 3" with no separator of any kind, so
+ * take one line per child element rather than splitting text that has nothing
+ * to split on.
+ *
+ * MprisManager injects this into the page by stringifying it, so it has to
+ * stay self-contained: parameters and page globals only, nothing from module
+ * scope. There is a test that evaluates it in an empty context to enforce that.
+ */
+function readTitleLines(doc, selectors) {
+  function linesOf(element) {
+    const lines = [];
+    for (const child of element.children || []) {
+      const text = (child.textContent || '').trim();
+      if (text) lines.push(text);
+    }
+    if (lines.length) return lines;
+
+    const own = (element.innerText || element.textContent || '').trim();
+    return own
+      .split('\n')
+      .map(function (line) {
+        return line.trim();
+      })
+      .filter(Boolean);
+  }
+
+  // First element giving more than one piece wins. Taking every match would
+  // let an outer container add the whole title back as one glued line, which
+  // then reads as the episode name.
+  const singles = [];
+  for (const selector of selectors) {
+    for (const element of doc.querySelectorAll(selector)) {
+      const lines = linesOf(element);
+      if (lines.length > 1) return lines;
+      if (lines.length === 1) singles.push(lines[0]);
+    }
+  }
+  return singles;
+}
+
+/**
+ * Read the page and resolve it in one call, for callers that run in the
+ * renderer and can require this module.
+ *
+ * MprisManager can't use this: its reading happens inside the page, where the
+ * module doesn't exist. It stringifies readTitleLines and calls resolveTrack
+ * in the main process instead.
+ */
+function readTrack(doc, titleSelectors, metaSelector) {
+  const meta = metaSelector ? doc.querySelector(metaSelector) : null;
+  return resolveTrack({
+    titleLines: readTitleLines(doc, titleSelectors),
+    metaText: (meta && (meta.innerText || meta.textContent)) || '',
+    documentTitle: doc.title,
+  });
+}
+
+/**
  * Keep what we already knew when a later read comes back emptier.
  *
  * The overlay disappears a few seconds after the controls hide, so most polls
@@ -364,6 +426,8 @@ module.exports = {
   mergeTrack,
   normalizeText,
   parseSeasonEpisode,
+  readTitleLines,
+  readTrack,
   resolveTrack,
   separateMarkers,
   splitShowAndEpisode,

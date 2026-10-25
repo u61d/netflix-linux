@@ -5,7 +5,13 @@ const { app } = require('electron');
 const { TITLE_SELECTORS, META_SELECTORS } = require('../../config/selectors');
 const { ASSETS } = require('../../config/constants');
 const { isBenignDbusStreamError } = require('../utils/errorFilters');
-const { buildMetadata, isEpisode, mergeTrack, resolveTrack } = require('../utils/mediaMetadata');
+const {
+  buildMetadata,
+  isEpisode,
+  mergeTrack,
+  readTitleLines,
+  resolveTrack,
+} = require('../../shared/mediaMetadata');
 
 // same clamp as PlaybackService, so a client can't pick a rate we'd reject
 const MIN_RATE = 0.25;
@@ -517,6 +523,8 @@ class MprisManager {
   _readPageState(win) {
     const script = `
       (function() {
+        const readTitleLines = ${readTitleLines.toString()};
+
         const result = {
           hasVideo: false,
           url: window.location.href,
@@ -537,44 +545,9 @@ class MprisManager {
         result.volume = Number.isFinite(video.volume) ? video.volume : 1;
         result.muted = Boolean(video.muted);
 
-        // The title block is
-        //   <div data-uia="video-title"><h4>Lupin</h4><span>E3</span><span>Chapter 3</span></div>
-        // and innerText comes back as "LupinE3Chapter 3" with no separator of
-        // any kind, so take one line per child element rather than splitting
-        // text that has nothing to split on.
-        function linesOf(element) {
-          const lines = [];
-          for (const child of element.children || []) {
-            const text = (child.textContent || '').trim();
-            if (text) lines.push(text);
-          }
-          if (lines.length) return lines;
-
-          const own = (element.innerText || element.textContent || '').trim();
-          return own
-            .split('\\n')
-            .map(function (line) {
-              return line.trim();
-            })
-            .filter(Boolean);
-        }
-
-        // First element giving more than one piece wins. Taking every match
-        // would let an outer container add the whole title back as one glued
-        // line, which then reads as the episode name.
-        const singles = [];
-        for (const selector of ${JSON.stringify(TITLE_SELECTORS)}) {
-          for (const element of document.querySelectorAll(selector)) {
-            const lines = linesOf(element);
-            if (lines.length > 1) {
-              result.titleLines = lines;
-              break;
-            }
-            if (lines.length === 1) singles.push(lines[0]);
-          }
-          if (result.titleLines.length) break;
-        }
-        if (!result.titleLines.length) result.titleLines = singles;
+        // readTitleLines is stringified in from the shared module so the
+        // page and the preload read the DOM the same way.
+        result.titleLines = readTitleLines(document, ${JSON.stringify(TITLE_SELECTORS)});
 
         const meta = document.querySelector(${JSON.stringify(META_SELECTORS.videoMeta)});
         result.metaText = (meta && (meta.innerText || meta.textContent) || '').trim();
