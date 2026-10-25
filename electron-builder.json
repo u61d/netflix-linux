@@ -15,7 +15,8 @@
       "entry": {
         "Name": "Netflix",
         "Comment": "Watch Netflix on Linux",
-        "Keywords": "netflix;streaming;video"
+        "Keywords": "netflix;streaming;video",
+        "StartupWMClass": "netflix-linux"
       }
     }
   },

@@ -553,6 +553,47 @@ describe('MprisManager', () => {
       expect(manager.lastState.currentTime).toBe(0);
     });
 
+    // Netflix autoplays billboard trailers on the browse page, so a <video>
+    // being present is not the same as the user watching something
+    it('reports Stopped on the browse page even when a trailer is playing', async () => {
+      manager.start();
+      mockWindow.webContents.executeJavaScript.mockResolvedValue(
+        pageState({
+          url: 'https://www.netflix.com/browse',
+          titleLines: [],
+          metaText: '',
+          playing: true,
+        })
+      );
+
+      await manager.poll();
+
+      expect(mockPlayerInstance.playbackStatus).toBe('Stopped');
+      expect(mockPlayerInstance.canPlay).toBe(false);
+    });
+
+    it('reports Stopped on a title page that previews a trailer', async () => {
+      manager.start();
+      mockWindow.webContents.executeJavaScript.mockResolvedValue(
+        pageState({ url: 'https://www.netflix.com/title/80057281', playing: true })
+      );
+
+      await manager.poll();
+
+      expect(mockPlayerInstance.playbackStatus).toBe('Stopped');
+    });
+
+    it('still reports playback on a watch URL with query parameters', async () => {
+      manager.start();
+      mockWindow.webContents.executeJavaScript.mockResolvedValue(
+        pageState({ url: 'https://www.netflix.com/watch/81507040?trackId=155573558' })
+      );
+
+      await manager.poll();
+
+      expect(mockPlayerInstance.playbackStatus).toBe('Playing');
+    });
+
     it('publishes the show, season and episode in the metadata', async () => {
       manager.start();
       await manager.poll();

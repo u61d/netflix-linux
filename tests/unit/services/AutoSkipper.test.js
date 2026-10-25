@@ -86,37 +86,108 @@ describe('AutoSkipper', () => {
   });
 
   it('runSelectorHealthCheck returns diagnostic summary', async () => {
-    mockWindow.webContents.executeJavaScript.mockResolvedValue([
-      { key: 'intro', selector: '.intro', exists: true, matchCount: 1 },
-      { key: 'recap', selector: '.recap', exists: false, matchCount: 0 },
-    ]);
+    mockWindow.webContents.executeJavaScript.mockResolvedValue({
+      playing: true,
+      entries: [
+        { key: 'title', selector: 'h4', exists: false, matchCount: 0, required: true },
+        { key: 'intro', selector: '.intro', exists: true, matchCount: 1, required: false },
+        { key: 'recap', selector: '.recap', exists: false, matchCount: 0, required: false },
+      ],
+    });
 
     const result = await service.runSelectorHealthCheck();
 
-    expect(result.total).toBe(2);
-    expect(result.valid).toBe(1);
-    expect(result.invalid).toBe(1);
-    expect(Array.isArray(result.selectors)).toBe(true);
+    expect(result.total).toBe(3);
+    expect(result.present).toBe(1);
+    expect(result.invalid).toBe(1); // only the required one counts
+    expect(result.valid).toBe(2);
+    expect(result.playing).toBe(true);
   });
 
-  it('validateSelectors warns when invalid selectors are found', async () => {
+  // a Skip Intro button is only in the DOM during the intro, so its absence
+  // is not a broken selector
+  it('runSelectorHealthCheck does not count transient selectors as invalid', async () => {
+    mockWindow.webContents.executeJavaScript.mockResolvedValue({
+      playing: true,
+      entries: [
+        { key: 'intro', selector: '.intro', exists: false, matchCount: 0, required: false },
+        { key: 'recap', selector: '.recap', exists: false, matchCount: 0, required: false },
+      ],
+    });
+
+    const result = await service.runSelectorHealthCheck();
+
+    expect(result.invalid).toBe(0);
+  });
+
+  it('asks the page about the title selectors too, not just the skip ones', async () => {
+    mockWindow.webContents.executeJavaScript.mockResolvedValue({ playing: false, entries: [] });
+
+    await service.runSelectorHealthCheck();
+
+    const script = mockWindow.webContents.executeJavaScript.mock.calls[0][0];
+    expect(script).toContain('video-title');
+    expect(script).toContain('video-meta');
+    expect(script).toContain('requiredWhilePlaying');
+  });
+
+  it('validateSelectors warns when a required selector is missing', async () => {
     jest.spyOn(service, 'runSelectorHealthCheck').mockResolvedValue({
       checkedAt: new Date().toISOString(),
+      playing: true,
       total: 2,
+      present: 1,
       valid: 1,
       invalid: 1,
       selectors: [
-        { key: 'intro', selector: '.intro', exists: false, matchCount: 0 },
-        { key: 'recap', selector: '.recap', exists: true, matchCount: 1 },
+        { key: 'title', selector: 'h4', exists: false, matchCount: 0, required: true },
+        { key: 'recap', selector: '.recap', exists: true, matchCount: 1, required: false },
       ],
     });
 
     await service.validateSelectors(true);
 
     expect(ctx.logger.warn).toHaveBeenCalledWith(
-      'Some skip selectors may be outdated:',
-      expect.arrayContaining(['intro: .intro'])
+      'Some selectors may be outdated:',
+      expect.arrayContaining(['title: h4'])
     );
+  });
+
+  // this is what used to fire a warning on every launch
+  it('validateSelectors says nothing when no video is playing', async () => {
+    jest.spyOn(service, 'runSelectorHealthCheck').mockResolvedValue({
+      checkedAt: new Date().toISOString(),
+      playing: false,
+      total: 8,
+      present: 0,
+      valid: 8,
+      invalid: 0,
+      selectors: [],
+    });
+
+    await service.validateSelectors(true);
+
+    expect(ctx.logger.warn).not.toHaveBeenCalled();
+    expect(service.lastValidation).toBe(0); // throttle untouched, so it retries
+  });
+
+  it('validateSelectors retries once playback starts', async () => {
+    const run = jest
+      .spyOn(service, 'runSelectorHealthCheck')
+      .mockResolvedValue({
+        playing: false,
+        total: 0,
+        present: 0,
+        valid: 0,
+        invalid: 0,
+        selectors: [],
+      });
+
+    await service.validateSelectors(true);
+    service.lastValidationAttempt = 0; // as if a minute had passed
+    await service.validateSelectors();
+
+    expect(run).toHaveBeenCalledTimes(2);
   });
 
   it('validateSelectors throttles checks to once per hour unless forced', async () => {

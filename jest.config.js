@@ -3,7 +3,7 @@ module.exports = {
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.js',
-    '!src/renderer/**',
+    '!src/renderer/**/vendor/**',
     '!src/**/*.test.js'
   ],
   testMatch: ['**/tests/unit/**/*.test.js'],

@@ -235,12 +235,11 @@ function getQueueButtonIcon() {
   `;
 }
 
+// Only used for hover-card titles now. It used to insert spaces at every
+// letter/digit boundary to pull apart the run-together player title, which
+// turned "Se7en" into "Se 7 en" and "F1: The Movie" into "F 1: The Movie" in
+// the queue. The metadata module does that job properly now.
 function normalizeText(value) {
   if (!value) return null;
-  return value
-    .replace(/\s+/g, ' ')
-    .replace(/([a-zA-Z])([A-Z]\d)/g, '$1 $2')
-    .replace(/([a-zA-Z])([0-9])/g, '$1 $2')
-    .replace(/([0-9])([a-zA-Z])/g, '$1 $2')
-    .trim();
+  return value.replace(/\s+/g, ' ').trim();
 }

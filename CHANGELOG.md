@@ -6,6 +6,7 @@
 
 - MPRIS integration: media keys, `playerctl`, and GNOME/KDE media widgets can now see and control playback (play/pause/seek), Linux only. Toggle in Settings under Integrations.
 - MPRIS now shows the series, the season and episode number and the episode name instead of just "Netflix". Shows split into parts rather than seasons get the episode on its own, the way Netflix shows it.
+- MPRIS Next skips to the next episode, so the next-track button in a media widget and `playerctl next` both work.
 - Window open, list item, and status banner animations across Settings, History, Keybinds, Profiles, Queue, and Watch Party, with `prefers-reduced-motion` respected
 - Loading spinners on async buttons (update check, rollback, selector diagnostics, Watch Party host/join)
 

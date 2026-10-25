@@ -44,6 +44,14 @@ function externalIconPath() {
   return fs.existsSync(candidate) ? candidate : null;
 }
 
+function isWatchUrl(url) {
+  try {
+    return new URL(url).pathname.startsWith('/watch/');
+  } catch {
+    return false;
+  }
+}
+
 // /watch/81234567 identifies the video; query params come and go.
 function watchKey(url) {
   try {
@@ -344,7 +352,9 @@ class MprisManager {
     const raw = await this._readPageState(win);
     if (!raw) return;
 
-    if (!raw.hasVideo) {
+    // The browse page autoplays billboard trailers, so a <video> on its own
+    // doesn't mean the user is watching something. Only /watch/ counts.
+    if (!raw.hasVideo || !isWatchUrl(raw.url)) {
       this._applyIdle();
       return;
     }
