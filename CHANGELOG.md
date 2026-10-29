@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-30
+
 ### Added
 
 - MPRIS integration: media keys, `playerctl`, and GNOME/KDE media widgets can now see and control playback (play/pause/seek), Linux only. Toggle in Settings under Integrations.
@@ -17,6 +19,13 @@
 - MPRIS ran the title, the episode number and the episode name together into one string ("LupinE3Chapter 3"). `innerText` on Netflix's title block returns no separator between the children, so it is read a child at a time now.
 - MPRIS fell back to "Netflix" for the artist and the album at the same time, which read as "Netflix Netflix" in a widget.
 - MPRIS dropped back to "Netflix" whenever a poll found no title, instead of keeping what it already knew.
+- MPRIS sat at Playing with a junk title while you browsed, because the browse and title pages autoplay billboard trailers and any page with a video counted as playback. It needs a /watch/ page now.
+- Discord Rich Presence and the watch history recorded no episode number. The three selectors they read were all gone from the player, so both had been storing null: of the 62 entries in one real history, not one carried a number. The episode number and name come from the player's title block now. Netflix no longer puts the season there, so that stays empty.
+- Discord Rich Presence threw away the episode number unless a season number came with it, which it usually does not. It shows `E1 - Pilot` now, or `S1·E1 - Pilot` when both are known.
+- The watch queue's dedupe collapsed unrelated items. Anything added without a URL was stamped with Netflix's home URL, and the dedupe keyed on that, so a queue holding three different shows added that way kept one of them.
+- Hover-card titles were mangled before being saved to the queue: a space went in at every letter/digit boundary, turning "Se7en" into "Se 7 en".
+- The selector health check warned about outdated selectors on every launch, when nothing was playing and the skip buttons were legitimately absent. It now only judges selectors that should be present, and only while something is playing.
+- The desktop entry's StartupWMClass said Netflix while the window's app_id is netflix-linux, so the two could not be matched up.
 
 ## [2.2.0] - 2026-08-07
 
