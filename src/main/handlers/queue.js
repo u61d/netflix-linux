@@ -9,6 +9,22 @@ function normalize(text) {
     .trim();
 }
 
+// What add-to-queue stores when an item arrives without one. It points at
+// Netflix's home page, so it identifies nothing and two items carrying it are
+// not the same item.
+const GENERIC_URL = 'https://www.netflix.com/';
+
+function identifyingUrl(url) {
+  const value = String(url || '');
+  return value && value !== GENERIC_URL ? value : '';
+}
+
+// Falls back to the title when the URL identifies nothing, otherwise a dedupe
+// would collapse every item that was added without a URL into one.
+function dedupeKey(entry) {
+  return identifyingUrl(entry.url) || normalize(entry.title);
+}
+
 function sortQueue(queue) {
   return [...queue].sort((a, b) => {
     const aPinned = a?.pinned ? 1 : 0;
@@ -48,9 +64,10 @@ module.exports = function setupQueueHandlers(ctx) {
 
       const queue = ctx.store.get('watchQueue', []);
       const normalizedTitle = normalize(safeTitle);
+      const matchUrl = identifyingUrl(safeUrl);
       const existingIndex = queue.findIndex(
         (entry) =>
-          (safeUrl && entry.url === safeUrl) || normalize(entry.title || '') === normalizedTitle
+          (matchUrl && entry.url === matchUrl) || normalize(entry.title || '') === normalizedTitle
       );
 
       const nextItem = {
@@ -147,7 +164,7 @@ module.exports = function setupQueueHandlers(ctx) {
       const deduped = [];
       const seen = new Set();
       for (const entry of queue) {
-        const key = entry.url || normalize(entry.title);
+        const key = dedupeKey(entry);
         if (seen.has(key)) continue;
         seen.add(key);
         deduped.push(entry);
