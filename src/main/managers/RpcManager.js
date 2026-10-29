@@ -309,9 +309,18 @@ class RpcManager {
     const details = this.normalizeText(player.title || 'Netflix');
     let state;
 
-    if (Number.isInteger(player.season) && Number.isInteger(player.episode)) {
+    // Either number on its own is worth showing: Netflix's player overlay
+    // gives an episode without a season for a lot of shows, and requiring
+    // both meant the episode number was thrown away.
+    if (Number.isInteger(player.season) || Number.isInteger(player.episode)) {
+      const label = [
+        Number.isInteger(player.season) ? `S${player.season}` : '',
+        Number.isInteger(player.episode) ? `E${player.episode}` : '',
+      ]
+        .filter(Boolean)
+        .join('·');
       const epTitle = player.episodeTitle ? ` - ${player.episodeTitle}` : '';
-      state = `S${player.season}·E${player.episode}${epTitle}`;
+      state = `${label}${epTitle}`;
     } else if (player.episodeTitle) {
       state = player.episodeTitle;
     } else {

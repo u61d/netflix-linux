@@ -55,22 +55,26 @@ describe('RpcManager', () => {
       jest.spyOn(manager, 'findDiscordIpcSocket').mockReturnValue('/tmp/discord-ipc-0');
 
       manager.start();
-      const disconnectHandler = mockClient.on.mock.calls.find(([event]) => event === 'disconnected')?.[1];
+      const disconnectHandler = mockClient.on.mock.calls.find(
+        ([event]) => event === 'disconnected'
+      )?.[1];
 
       disconnectHandler();
       expect(manager.reconnectAttempts).toBe(1);
 
       mockClient.login.mockClear();
-    
+
       manager.client = null;
       manager.connect();
-      
-      const disconnectHandler2 = mockClient.on.mock.calls.find(([event]) => event === 'disconnected')?.[1];
+
+      const disconnectHandler2 = mockClient.on.mock.calls.find(
+        ([event]) => event === 'disconnected'
+      )?.[1];
       disconnectHandler2();
       expect(manager.reconnectAttempts).toBe(2);
 
       mockClient.login.mockClear();
-      
+
       jest.advanceTimersByTime(7000);
       expect(mockClient.login).not.toHaveBeenCalled();
 
@@ -252,6 +256,45 @@ describe('RpcManager', () => {
       expect(payload.details).toBe('The Night Agent');
       expect(payload.state.toLowerCase()).not.toContain('the night agent');
       expect(payload.state).toContain('Es war einmal');
+    });
+  });
+
+  // Netflix's player overlay gives an episode number with no season for a lot
+  // of shows, so requiring both used to drop the episode number entirely
+  describe('episode labels', () => {
+    const manager = () =>
+      new RpcManager({
+        store: { get: () => null },
+        logger: { debug() {}, info() {}, warn() {}, error() {} },
+      });
+
+    const fields = (overrides) =>
+      manager().buildActivityFields({
+        title: 'You',
+        episodeTitle: 'Pilot',
+        season: null,
+        episode: null,
+        ...overrides,
+      });
+
+    it('shows an episode number on its own', () => {
+      expect(fields({ episode: 1 }).state).toBe('E1 - Pilot');
+    });
+
+    it('shows a season number on its own', () => {
+      expect(fields({ season: 2 }).state).toBe('S2 - Pilot');
+    });
+
+    it('shows both when both are known', () => {
+      expect(fields({ season: 1, episode: 1 }).state).toBe('S1·E1 - Pilot');
+    });
+
+    it('falls back to the episode name when there is no number at all', () => {
+      expect(fields({}).state).toBe('Pilot');
+    });
+
+    it('drops the separator when there is a number but no episode name', () => {
+      expect(fields({ episode: 4, episodeTitle: '' }).state).toBe('E4');
     });
   });
 });
